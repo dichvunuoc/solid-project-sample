@@ -176,7 +176,7 @@ frontend-sample/
 ├── src/
 │   ├── app/              # Application layer
 │   │   ├── providers.tsx        # Global providers
-│   │   ├── middleware.ts        # Auth middleware
+│   │   ├── providers.tsx        # Global providers
 │   │   └── root.tsx             # Root component
 │   ├── pages/            # Pages layer
 │   │   ├── home/

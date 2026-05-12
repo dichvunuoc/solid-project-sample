@@ -238,7 +238,7 @@ export function requiresAuth(path: string): boolean {
  * Role hierarchy
  * Higher values mean more permissions
  */
-const roleHierarchy: Record<Role, number> = {
+export const roleHierarchy: Record<Role, number> = {
   guest: 0,
   user: 1,
   moderator: 2,

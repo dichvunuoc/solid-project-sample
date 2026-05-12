@@ -10,12 +10,11 @@ import { useNavigate } from '@tanstack/react-router'
 import { useDashboardSync } from '@/features/dashboard-sync'
 import { ProcessPaymentAction } from '@/features/process-payment'
 import { FinanceCard } from '@/entities/finance'
-import { useSession } from '@/entities/session/api/use-session'
-import { authClient } from '@/shared/lib/client-auth'
+import { useSessionContext } from '@/entities/session/ui/session-provider'
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/shared/ui'
 
 export function DashboardPage() {
-  const { data: session, isLoading } = useSession()
+  const { session, isLoading, logout } = useSessionContext()
   const navigate = useNavigate()
 
   // Orchestrator: Listen to events and sync dashboard data
@@ -28,7 +27,7 @@ export function DashboardPage() {
   }
 
   const handleLogout = async () => {
-    await authClient.signOut()
+    await logout()
     navigate({ to: '/login' })
   }
 
@@ -51,17 +50,7 @@ export function DashboardPage() {
                 <div>
                   <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
                   <p className="text-muted-foreground">
-                    Welcome,{' '}
-                    {session &&
-                    typeof session === 'object' &&
-                    session !== null &&
-                    'user' in session &&
-                    session.user &&
-                    typeof session.user === 'object' &&
-                    'email' in session.user
-                      ? String(session.user.email) || 'User'
-                      : 'User'}
-                    !
+                    Welcome, {session?.user?.name || session?.user?.email || 'User'}!
                   </p>
                 </div>
                 <Button onClick={handleLogout} variant="destructive">

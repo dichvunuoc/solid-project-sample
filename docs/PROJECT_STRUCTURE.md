@@ -9,8 +9,7 @@ frontend-sample/
 ├── src/
 │   │
 │   ├── app/                          # 🎯 APP LAYER - Application initialization
-│   │   ├── middleware.ts            # Auth middleware for route protection
-│   │   ├── providers.tsx            # Global providers (QueryClient, etc.)
+│   │   ├── providers.tsx            # Global providers (QueryClient, Session, etc.)
 │   │   ├── root.tsx                 # Root component exports
 │   │   ├── app.css                  # Global styles (Tailwind imports)
 │   │   └── types.ts                 # TypeScript type definitions
@@ -135,7 +134,7 @@ Each file in `src/routes/` corresponds to a URL path and imports a component fro
 - `src/shared/api/better-auth.ts` - Server-side Better Auth config
 - `src/shared/lib/client-auth.ts` - Client-side auth client
 - `src/routes/api/auth/$.ts` - Auth API endpoint handler
-- `src/app/middleware.ts` - Route protection middleware
+- `src/app/providers.tsx` - Global providers (Query, session, toasts)
 
 ### Git Hooks
 

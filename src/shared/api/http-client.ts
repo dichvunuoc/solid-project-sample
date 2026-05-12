@@ -7,6 +7,7 @@
 
 import { env } from '@/shared/config/env'
 import { getAuthToken } from '@/shared/lib/auth-token'
+import { authClient } from '@/shared/lib/client-auth'
 import { toast } from '@/shared/lib/toast'
 
 export interface HttpClientConfig {
@@ -59,41 +60,58 @@ class HttpClient {
   }
 
   private async request<T>(url: string, config: RequestConfig = {}): Promise<T> {
-    // Note: getAuthToken is async, so we need to await it before making the request
     const { skipErrorToast = false, skipAuth = false, headers = {}, ...fetchConfig } = config
 
     const fullUrl = url.startsWith('http') ? url : `${this.baseURL}${url}`
 
-    // Merge headers
-    const requestHeaders: HeadersInit = {
-      ...this.defaultHeaders,
-      ...(headers as Record<string, string>),
-    }
+    const send = async (): Promise<Response> => {
+      const requestHeaders: HeadersInit = {
+        ...this.defaultHeaders,
+        ...(headers as Record<string, string>),
+      }
 
-    // Add auth token if available and not skipped
-    if (!skipAuth) {
-      const token = await getAuthToken()
-      if (token) {
-        requestHeaders['Authorization'] = `Bearer ${token}`
+      if (!skipAuth) {
+        const token = await getAuthToken()
+        if (token) {
+          requestHeaders['Authorization'] = `Bearer ${token}`
+        }
+      }
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+
+      try {
+        const response = await fetch(fullUrl, {
+          ...fetchConfig,
+          headers: requestHeaders,
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+        return response
+      } catch (e) {
+        clearTimeout(timeoutId)
+        throw e
       }
     }
 
-    // Create abort controller for timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
-
     try {
-      const response = await fetch(fullUrl, {
-        ...fetchConfig,
-        headers: requestHeaders,
-        signal: controller.signal,
-      })
+      let response = await send()
 
-      clearTimeout(timeoutId)
+      if (response.status === 401 && !skipAuth) {
+        const refreshed = await authClient.updateToken(30)
+        if (refreshed) {
+          response = await send()
+        } else {
+          // Token refresh failed — redirect to login
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+          }
+          throw new Error('Session expired. Please sign in again.')
+        }
+      }
+
       return await this.handleResponse<T>(response)
     } catch (error) {
-      clearTimeout(timeoutId)
-
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           const timeoutError = new Error('Request timeout')

@@ -42,7 +42,7 @@
 
 ```
 src/
-├── app/          # ⚙️  App initialization, providers, middleware
+├── app/          # ⚙️  App initialization, providers
 ├── pages/        # 📄 Route entry points, compose features/entities
 ├── widgets/      # 🧩 Complex UI blocks (Header, Sidebar) [Currently minimal]
 ├── features/     # ⚡ User interactions (auth, payments, rewards)

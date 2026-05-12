@@ -4,7 +4,7 @@ A **Vite + React** single-page application template organized with **Feature-Sli
 
 - **Auth:** local dev can use the built-in mock; production services should use `VITE_AUTH_MODE=keycloak` for the shared Keycloak SSO flow, or implement the `backend-session` adapter behind [`src/shared/lib/client-auth.ts`](src/shared/lib/client-auth.ts).
 - **APIs:** configure `VITE_API_URL` (gateway or domain service). See [`docs/api-contracts.md`](docs/api-contracts.md) for contract-first integration.
-- **Template upgrades:** see [`CHANGELOG-template.md`](CHANGELOG-template.md) and tag releases (for example `template/v1.0.0`) for downstream forks.
+- **Template upgrades:** see [`CHANGELOG-template.md`](CHANGELOG-template.md), [`docs/migrations/`](docs/migrations/), and tag releases (for example `template/v1.1.0`) for downstream forks.
 
 ## 🏗️ Architecture Overview
 
@@ -125,7 +125,7 @@ Copy [`.env.example`](.env.example) to `.env` and set at least:
 | `VITE_KEYCLOAK_REALM`     | Keycloak realm name.                                                                   |
 | `VITE_KEYCLOAK_CLIENT_ID` | Public frontend client id registered in Keycloak.                                      |
 | `VITE_USE_MOCK_DATA`      | `true` to enable MSW in dev (see `src/shared/api/mocks/browser.ts`).                   |
-| `VITE_E2E_BASE_URL`       | Optional override for Playwright (defaults to `http://localhost:3000`).                |
+| `VITE_E2E_BASE_URL`       | Optional Playwright `baseURL` (defaults to `http://localhost:4173`, matching `playwright.config.ts` webServer). |
 
 For **multiple backends** (micro-UI per domain), add more `VITE_*` URLs and small factories under `src/shared/api/` instead of hardcoding URLs inside features.
 
@@ -220,7 +220,7 @@ import { ExamplePage } from '@/pages/example' // Import from pages layer
 
 export const Route = createFileRoute('/example')({
   component: ExamplePage, // Use the page component
-  // Optional: Add middleware, loaders, etc.
+  // Optional: loaders, search validation, etc.
 })
 ```
 
@@ -229,7 +229,7 @@ export const Route = createFileRoute('/example')({
 1. **Route files** (`src/routes/`) should be thin - they only define routing configuration
 2. **Page components** (`src/pages/`) contain the actual UI and business logic
 3. Pages can compose widgets and features from other FSD layers
-4. Use route `beforeLoad` or middleware for data fetching and auth checks
+4. Use route `beforeLoad` (and loaders) for auth checks and prefetch
 
 ## 🪝 Git Hooks (Husky + lint-staged)
 
@@ -295,7 +295,7 @@ This project uses **Tailwind CSS**. Global styles are imported in `src/app/app.c
 ### Quality
 
 - **Unit tests**: Vitest 2 + Testing Library
-- **E2E**: Playwright (see `playwright.config.ts`; dev server on port **3000**)
+- **E2E**: Playwright starts its own dev server on port **4173** by default (see `playwright.config.ts`); day-to-day `npm run dev` stays on **3000**.
 - **Lint**: ESLint 9 flat config + Prettier + Husky
 
 ## 🔄 Development Workflow
@@ -339,7 +339,7 @@ Comprehensive guides are available to help you work with this project:
 
 ## 🎯 FSD Layer Guidelines
 
-- **app/**: App initialization, global providers, middleware
+- **app/**: App initialization, global providers
 - **pages/**: Full page components, route entry points
 - **widgets/**: Complex UI blocks (header, sidebar, etc.)
 - **features/**: User interactions (sign-in, create-post, etc.)

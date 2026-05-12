@@ -1,124 +1,94 @@
 /**
  * Authentication E2E Tests
  *
- * Tests the complete authentication flow from login to dashboard access.
+ * Targets default template settings: VITE_AUTH_MODE=mock in dev (see src/shared/config/env.ts).
+ * For Keycloak E2E, use a dedicated project with env + IdP (see docs/auth-keycloak.md).
  */
 
 import { test, expect } from '@playwright/test'
+import { loginAsMockDemoUser } from './helpers/mock-login'
 
 test.describe('Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Start from the home page
     await page.goto('/')
   })
 
   test('should display home page', async ({ page }) => {
     await expect(page).toHaveTitle(/Frontend Sample/i)
+    await expect(page.getByRole('heading', { level: 1, name: /Frontend Sample/i })).toBeVisible()
   })
 
   test('should navigate to login page', async ({ page }) => {
-    // Look for login link (adjust selector based on your UI)
-    const loginLink = page.getByRole('link', { name: /login|sign in/i })
-    if (await loginLink.isVisible()) {
-      await loginLink.click()
-      await expect(page).toHaveURL(/.*login/)
-    }
+    await page.getByRole('link', { name: /^Login$/i }).click()
+    await expect(page).toHaveURL(/\/login/)
   })
 
-  test('should show validation errors on empty login form', async ({ page }) => {
+  test('should keep empty fields invalid on submit attempt (HTML5 validation)', async ({
+    page,
+  }) => {
     await page.goto('/login')
 
-    // Try to submit empty form
-    const submitButton = page.getByRole('button', { name: /sign in/i })
-    await submitButton.click()
-
-    // Should see validation errors (adjust based on your error messages)
-    await expect(page.getByText(/email is required/i)).toBeVisible()
-  })
-
-  test('should login with valid credentials', async ({ page }) => {
-    await page.goto('/login')
-
-    // Fill in login form
-    await page.getByLabel(/email/i).fill('test@example.com')
-    await page.getByLabel(/password/i).fill('password123')
-
-    // Submit form
+    const email = page.getByPlaceholder('Email address')
+    const password = page.getByPlaceholder('Password')
     await page.getByRole('button', { name: /sign in/i }).click()
 
-    // Should redirect to dashboard (adjust URL based on your routes)
-    // Note: This will fail unless you have proper auth setup or mocking
-    // await expect(page).toHaveURL(/.*dashboard/)
+    await expect(email).toHaveJSProperty('validity.valueMissing', true)
+    await expect(password).toHaveJSProperty('validity.valueMissing', true)
   })
 
-  test('should not access protected routes without authentication', async ({ page }) => {
-    // Try to access dashboard directly
-    await page.goto('/dashboard')
+  test('should login with mock demo credentials', async ({ page }) => {
+    await loginAsMockDemoUser(page)
+    await expect(page.getByRole('heading', { name: /^Dashboard$/i })).toBeVisible()
+  })
 
-    // Should redirect to login (adjust based on your auth flow)
-    // await expect(page).toHaveURL(/.*login/)
+  test('should not access protected routes without authentication', async ({ page, context }) => {
+    await context.clearCookies()
+    await page.goto('/')
+    await page.evaluate(() => {
+      localStorage.removeItem('mock_session')
+      localStorage.removeItem('mock_users')
+    })
+    await page.goto('/dashboard')
+    await expect(page).toHaveURL(/\/login/)
   })
 
   test('should logout successfully', async ({ page }) => {
-    // This test assumes user is already logged in
-    // You may need to perform login first or use storage state
-
-    await page.goto('/dashboard')
-
-    // Click logout button (adjust selector based on your UI)
-    const logoutButton = page.getByRole('button', { name: /logout|sign out/i })
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click()
-
-      // Should redirect to home or login
-      // await expect(page).toHaveURL(/.*\/(|login)/)
-    }
+    await loginAsMockDemoUser(page)
+    await page.getByRole('button', { name: /^Logout$/i }).click()
+    await expect(page).toHaveURL(/\/login/)
   })
 })
 
 test.describe('Registration Flow', () => {
-  test('should navigate to registration page', async ({ page }) => {
-    await page.goto('/')
-
-    const registerLink = page.getByRole('link', { name: /register|sign up/i })
-    if (await registerLink.isVisible()) {
-      await registerLink.click()
-      await expect(page).toHaveURL(/.*register/)
-    }
+  test('should navigate to registration page from login', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByRole('link', { name: /create a new account/i }).click()
+    await expect(page).toHaveURL(/\/register/)
   })
 
-  test('should show validation errors on invalid registration', async ({ page }) => {
+  test('should show client validation on invalid registration', async ({ page }) => {
     await page.goto('/register')
 
-    // Fill with invalid data
-    await page.getByLabel(/email/i).fill('invalid-email')
-    await page.getByLabel(/password/i).fill('123') // Too short
+    await page.getByPlaceholder('Your name').fill('Test User')
+    const email = page.getByPlaceholder('Email address')
+    await email.fill('invalid-email')
+    await page.getByPlaceholder('Password (min. 8 characters)').fill('password12')
+    await page.getByPlaceholder('Confirm password').fill('password12')
+    await page.getByRole('button', { name: /sign up/i }).click()
 
-    // Submit form
-    await page.getByRole('button', { name: /sign up|register/i }).click()
-
-    // Should see validation errors
-    // Adjust based on your validation messages
+    await expect(email).toHaveJSProperty('validity.typeMismatch', true)
   })
 })
 
 test.describe('Accessibility', () => {
-  test('should not have any automatically detectable accessibility issues', async ({ page }) => {
+  test('should expose document title', async ({ page }) => {
     await page.goto('/')
-
-    // Check for basic accessibility issues
-    // You can integrate with axe-core for more thorough checks
     await expect(page).toHaveTitle(/Frontend Sample/i)
   })
 
-  test('should be navigable with keyboard', async ({ page }) => {
+  test('should focus email field from placeholder', async ({ page }) => {
     await page.goto('/login')
-
-    // Tab through form fields
-    await page.keyboard.press('Tab')
-    await page.keyboard.press('Tab')
-
-    // Should be able to submit with Enter
-    // await page.keyboard.press('Enter')
+    await page.getByPlaceholder('Email address').focus()
+    await expect(page.getByPlaceholder('Email address')).toBeFocused()
   })
 })

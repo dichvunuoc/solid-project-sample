@@ -1,15 +1,25 @@
 /**
  * Mock Authentication Client
- * 
+ *
  * Stores users and sessions in localStorage for development/demo purposes.
- * This is a mock implementation - replace with real auth in production.
+ * Passwords are obfuscated (not cryptographically hashed) to avoid plaintext storage.
+ * This is a mock implementation — never use in production.
  */
 
-interface User {
+import type { AuthSessionData } from './client-auth'
+
+interface StoredUser {
   id: string
   email: string
   name?: string
-  password: string // In real app, this would be hashed
+  ph: string // obfuscated password hash
+  createdAt: string
+}
+
+interface SafeUser {
+  id: string
+  email: string
+  name?: string
   createdAt: string
 }
 
@@ -22,21 +32,32 @@ interface Session {
 const USERS_KEY = 'mock_users'
 const SESSION_KEY = 'mock_session'
 
+/** Simple obfuscation — NOT cryptographic, just avoids plaintext in localStorage. */
+function obscure(value: string): string {
+  return btoa(unescape(encodeURIComponent(value)))
+    .split('')
+    .reverse()
+    .join('')
+}
+
+function verifyPassword(raw: string, ph: string): boolean {
+  return obscure(raw) === ph
+}
+
 /** Local mock auth runs in dev unless VITE_USE_MOCK_AUTH=false. Never seeds storage in production builds. */
 export const isMockAuthActive =
   import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_AUTH !== 'false'
 
-// Initialize with a demo user
 function initializeMockUsers() {
   if (typeof window === 'undefined') return
 
   const existing = localStorage.getItem(USERS_KEY)
   if (!existing) {
-    const demoUser: User = {
+    const demoUser: StoredUser = {
       id: '1',
       email: 'demo@example.com',
       name: 'Demo User',
-      password: 'password123', // In production, this would be hashed
+      ph: obscure('password123'),
       createdAt: new Date().toISOString(),
     }
     localStorage.setItem(USERS_KEY, JSON.stringify([demoUser]))
@@ -47,18 +68,18 @@ if (typeof window !== 'undefined' && isMockAuthActive) {
   initializeMockUsers()
 }
 
-function getUsers(): User[] {
+function getUsers(): StoredUser[] {
   if (typeof window === 'undefined') return []
   const usersJson = localStorage.getItem(USERS_KEY)
   return usersJson ? JSON.parse(usersJson) : []
 }
 
-function saveUsers(users: User[]) {
+function saveUsers(users: StoredUser[]) {
   if (typeof window === 'undefined') return
   localStorage.setItem(USERS_KEY, JSON.stringify(users))
 }
 
-function getSession(): Session | null {
+function getStoredSession(): Session | null {
   if (typeof window === 'undefined') return null
   const sessionJson = localStorage.getItem(SESSION_KEY)
   if (!sessionJson) return null
@@ -76,8 +97,11 @@ function saveSession(session: Session) {
 }
 
 function clearSession() {
-  if (typeof window === 'undefined') return
-  localStorage.removeItem(SESSION_KEY)
+  if (typeof window !== 'undefined') localStorage.removeItem(SESSION_KEY)
+}
+
+function toSafeUser(u: StoredUser): SafeUser {
+  return { id: u.id, email: u.email, name: u.name, createdAt: u.createdAt }
 }
 
 export const mockAuth = {
@@ -86,38 +110,34 @@ export const mockAuth = {
       email: string
       password: string
       name?: string
-    }): Promise<{ user: User }> => {
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
+    }): Promise<{ user: SafeUser }> => {
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       const users = getUsers()
 
-      // Check if user already exists
-      if (users.some((u) => u.email === params.email)) {
+      if (users.some(u => u.email === params.email)) {
         throw new Error('User with this email already exists')
       }
 
-      // Create new user
-      const newUser: User = {
+      const newUser: StoredUser = {
         id: Date.now().toString(),
         email: params.email,
         name: params.name,
-        password: params.password, // In production, hash this
+        ph: obscure(params.password),
         createdAt: new Date().toISOString(),
       }
 
       users.push(newUser)
       saveUsers(users)
 
-      // Auto-login after signup
       const session: Session = {
-        token: `token_${Date.now()}_${Math.random()}`,
+        token: `mock_${Date.now()}_${crypto.getRandomValues(new Uint32Array(1))[0]}`,
         userId: newUser.id,
-        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
       }
       saveSession(session)
 
-      return { user: newUser }
+      return { user: toSafeUser(newUser) }
     },
   },
 
@@ -125,47 +145,40 @@ export const mockAuth = {
     email: async (params: {
       email: string
       password: string
-    }): Promise<{ user: User }> => {
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
+    }): Promise<{ user: SafeUser }> => {
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       const users = getUsers()
-      const user = users.find(
-        (u) => u.email === params.email && u.password === params.password,
-      )
+      const user = users.find(u => u.email === params.email && verifyPassword(params.password, u.ph))
 
       if (!user) {
         throw new Error('Invalid email or password')
       }
 
-      // Create session
       const session: Session = {
-        token: `token_${Date.now()}_${Math.random()}`,
+        token: `mock_${Date.now()}_${crypto.getRandomValues(new Uint32Array(1))[0]}`,
         userId: user.id,
-        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
       }
       saveSession(session)
 
-      return { user }
+      return { user: toSafeUser(user) }
     },
   },
 
   signOut: async (): Promise<void> => {
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await new Promise(resolve => setTimeout(resolve, 200))
     clearSession()
   },
 
-  getSession: async (): Promise<{
-    user: User
-    session: Session
-  } | null> => {
-    await new Promise((resolve) => setTimeout(resolve, 100))
+  getSession: async (): Promise<AuthSessionData | null> => {
+    await new Promise(resolve => setTimeout(resolve, 100))
 
-    const session = getSession()
+    const session = getStoredSession()
     if (!session) return null
 
     const users = getUsers()
-    const user = users.find((u) => u.id === session.userId)
+    const user = users.find(u => u.id === session.userId)
 
     if (!user) {
       clearSession()
@@ -177,10 +190,12 @@ export const mockAuth = {
         id: user.id,
         email: user.email,
         name: user.name,
-        createdAt: user.createdAt,
-      } as User,
-      session,
+        roles: ['user'],
+      },
+      session: {
+        token: session.token,
+        expiresAt: session.expiresAt,
+      },
     }
   },
 }
-

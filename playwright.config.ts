@@ -26,8 +26,8 @@ export default defineConfig({
 
   // Shared settings for all the projects below
   use: {
-    // Base URL to use in actions like `await page.goto('/')` (must match vite.config server.port)
-    baseURL: process.env.VITE_E2E_BASE_URL || 'http://localhost:3000',
+    // Dedicated port avoids picking up `npm run dev` on 3000 from another repo when reuseExistingServer was true.
+    baseURL: process.env.VITE_E2E_BASE_URL || 'http://localhost:4173',
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -69,9 +69,9 @@ export default defineConfig({
 
   // Run your local dev server before starting the tests
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    command: 'npm run dev -- --port 4173 --strictPort',
+    url: 'http://localhost:4173',
+    reuseExistingServer: process.env.PW_REUSE_EXISTING_SERVER === '1',
     timeout: 120 * 1000,
   },
 })

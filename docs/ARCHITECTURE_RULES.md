@@ -38,8 +38,7 @@ src/
 - **Purpose**: Application initialization, root providers, global configuration
 - **Contains**:
   - `root.tsx` - Root component with providers
-  - `providers.tsx` - Provider composition (Query, Event Registry, etc.)
-  - `middleware.ts` - Global middleware
+  - `providers.tsx` - Provider composition (Query, Session, Event Registry, etc.)
   - `app.css` - Global styles
   - `types.ts` - Global TypeScript types
 - **Dependencies**: Can import from `shared` only
@@ -54,7 +53,6 @@ src/app/
 ├── providers/
 │   ├── query-provider.tsx
 │   └── event-registry.tsx
-├── middleware.ts
 ├── app.css
 └── types.ts
 ```

@@ -52,4 +52,3 @@ jobs:
         run: npx playwright test --project=chromium
         env:
           CI: true
-          VITE_E2E_BASE_URL: http://localhost:3000

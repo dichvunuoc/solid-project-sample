@@ -6,38 +6,29 @@
  */
 
 import { useSession } from '@/entities/session/api/use-session'
+import { deriveAppRoleFromSession } from '../auth-role'
 import {
   hasPermission,
   hasAnyPermission,
-  hasAllPermissions,
   canAccessRoute,
   hasRoleLevel,
   type Role,
   type Permission,
 } from '../permissions'
 
+function useTokenPermissionSet(): Set<string> {
+  const { data: session } = useSession()
+  const list = session?.user?.permissions
+  if (!list?.length) return new Set()
+  return new Set(list)
+}
+
 /**
- * Get the user's role from session
- * Falls back to 'guest' if not authenticated
+ * Get the user's role from session (Keycloak `roles[]`, optional `role`, or mock default).
  */
 function useUserRole(): Role {
   const { data: session } = useSession()
-
-  // Extract role from session
-  // Adjust this based on your session structure
-  if (
-    session &&
-    typeof session === 'object' &&
-    'user' in session &&
-    session.user &&
-    typeof session.user === 'object' &&
-    'role' in session.user &&
-    typeof session.user.role === 'string'
-  ) {
-    return session.user.role as Role
-  }
-
-  return 'guest'
+  return deriveAppRoleFromSession(session ?? null)
 }
 
 /**
@@ -58,8 +49,9 @@ function useUserRole(): Role {
  * ```
  */
 export function usePermission(permission: Permission): boolean {
+  const tokenSet = useTokenPermissionSet()
   const role = useUserRole()
-  return hasPermission(role, permission)
+  return tokenSet.has(permission) || hasPermission(role, permission)
 }
 
 /**
@@ -80,8 +72,9 @@ export function usePermission(permission: Permission): boolean {
  * ```
  */
 export function useAnyPermission(permissions: Permission[]): boolean {
+  const tokenSet = useTokenPermissionSet()
   const role = useUserRole()
-  return hasAnyPermission(role, permissions)
+  return permissions.some(p => tokenSet.has(p)) || hasAnyPermission(role, permissions)
 }
 
 /**
@@ -91,8 +84,9 @@ export function useAnyPermission(permissions: Permission[]): boolean {
  * @returns Whether user has all permissions
  */
 export function useAllPermissions(permissions: Permission[]): boolean {
+  const tokenSet = useTokenPermissionSet()
   const role = useUserRole()
-  return hasAllPermissions(role, permissions)
+  return permissions.every(p => tokenSet.has(p) || hasPermission(role, p))
 }
 
 /**
@@ -183,11 +177,12 @@ export function useRole(): Role {
 export function usePermissions<T extends Record<string, Permission>>(
   permissions: T
 ): Record<keyof T, boolean> {
+  const tokenSet = useTokenPermissionSet()
   const role = useUserRole()
 
   return Object.entries(permissions).reduce(
     (acc, [key, permission]) => {
-      acc[key as keyof T] = hasPermission(role, permission)
+      acc[key as keyof T] = tokenSet.has(permission) || hasPermission(role, permission)
       return acc
     },
     {} as Record<keyof T, boolean>

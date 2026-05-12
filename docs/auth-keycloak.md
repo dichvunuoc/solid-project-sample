@@ -1,18 +1,16 @@
 # Keycloak SSO Integration
 
-This template supports a common IAM based on Keycloak through a single frontend auth facade:
+This template supports a shared IAM based on Keycloak through a single browser-facing facade:
 
-- `src/shared/lib/client-auth.ts` is the only public auth entry point.
-- `src/shared/lib/keycloak-auth.ts` contains the browser Keycloak adapter.
-- `src/shared/lib/auth-token.ts` is what the HTTP client uses for bearer tokens.
-
-## Recommended Flow
-
-Use Authorization Code + PKCE for browser applications. Do not store access tokens or refresh tokens in `localStorage`. The Keycloak adapter keeps tokens in memory and refreshes them before API calls.
+| Module | Role |
+|--------|------|
+| [`src/shared/lib/client-auth.ts`](../src/shared/lib/client-auth.ts) | Public `authClient` — the only entry point for routes, features, and HTTP. |
+| [`src/shared/lib/keycloak-auth.ts`](../src/shared/lib/keycloak-auth.ts) | Keycloak adapter (`keycloak-js`), PKCE, token refresh, JWT role/permission parsing. |
+| [`src/shared/lib/auth-token.ts`](../src/shared/lib/auth-token.ts) | Bearer token for `httpClient`. |
+| [`src/shared/lib/route-guards.ts`](../src/shared/lib/route-guards.ts) | `authGuard()` — Keycloak triggers OIDC login; mock redirects to `/login`. |
+| [`src/entities/session/ui/session-provider.tsx`](../src/entities/session/ui/session-provider.tsx) | Session context + Keycloak event bridge (`attachKeycloakSessionSync`). |
 
 ## Environment
-
-Set these variables for a service that uses SSO:
 
 ```env
 VITE_AUTH_MODE=keycloak
@@ -23,42 +21,64 @@ VITE_KEYCLOAK_ON_LOAD=check-sso
 VITE_KEYCLOAK_SILENT_CHECK_SSO_REDIRECT_URI=https://my-service.example.com/silent-check-sso.html
 ```
 
-For local development:
+For local development without Keycloak:
 
 ```env
 VITE_AUTH_MODE=mock
 VITE_USE_MOCK_AUTH=true
 ```
 
-## Keycloak Client Setup
+Copy [`.env.example`](../.env.example) to `.env` and adjust values.
 
-Create one public client per frontend service unless your IAM team has standardized a shared client. Configure:
+## `check-sso` vs `login-required`
 
-- Client type: public
-- Standard flow: enabled
-- PKCE: S256
-- Direct access grants: disabled for browser-only services
-- Valid redirect URIs: service origin plus local dev origin, for example `http://localhost:3000/*`
-- Web origins: service origin plus local dev origin
-- Silent SSO page: `/silent-check-sso.html`
+| `VITE_KEYCLOAK_ON_LOAD` | Behavior |
+|-------------------------|----------|
+| `check-sso` (default) | On load, Keycloak runs a **silent SSO check** using `silentCheckSsoRedirectUri`. If the user already has a session at the IdP, tokens are issued without a visible redirect. If not, the SPA stays anonymous until `authClient.login()` runs (e.g. user opens `/login` or hits a protected route via `authGuard`). **Requires** `VITE_KEYCLOAK_SILENT_CHECK_SSO_REDIRECT_URI` pointing at [`public/silent-check-sso.html`](../public/silent-check-sso.html) (absolute URL). |
+| `login-required` | Unauthenticated users are sent to Keycloak **immediately** on first `init`. Use for portals that should never render anonymously. Silent SSO URI is less critical but still recommended for refresh flows. |
 
-## Roles And Permissions
+## Silent SSO redirect URI
 
-The adapter reads roles from:
+- Must be an **absolute** URL: `https://host/silent-check-sso.html` or `http://localhost:3000/silent-check-sso.html`.
+- Path must match the static file served by Vite (`public/silent-check-sso.html`).
+- Register the same URL under the Keycloak client **Valid redirect URIs** (exact match or wildcard per your IAM policy).
 
-- `realm_access.roles`
-- `resource_access[VITE_KEYCLOAK_CLIENT_ID].roles`
+## Multiple frontend services
 
-It reads permissions from:
+Each SPA origin typically has:
 
-- `permissions`
-- `authorization.permissions`, mapped to `resource:scope`
+- Its own **public client** in Keycloak (or a shared client only if IAM mandates it).
+- **Valid redirect URIs** listing every deployment origin (e.g. `https://orders.example.com/*`, `https://reports.example.com/*`, `http://localhost:3001/*`).
+- **Web origins** aligned with those hosts for CORS/browser checks.
 
-Frontend authorization should only control UX: route access, hidden buttons, disabled actions. Backend APIs must enforce authorization independently.
+`authClient.login(redirectUri)` and `authGuard()` pass the **return URL** after login; ensure those URLs stay within allowed redirect patterns.
 
-## Route Guard Usage
+## Keycloak client setup (summary)
 
-Current protected routes call:
+- Access type: **public**
+- Standard flow: **enabled**
+- PKCE: **S256** (enforced in code via `pkceMethod: 'S256'`)
+- Direct access grants: **disabled** for browser-only apps
+- Valid redirect URIs + Web origins: all app URLs + dev ports
+- Optional: **Consent** / **Full scope** per org policy
+
+## Roles and permissions in the SPA
+
+The adapter maps JWT claims to `AuthSessionData`:
+
+- **Roles:** `realm_access.roles` and `resource_access[VITE_KEYCLOAK_CLIENT_ID].roles`
+- **Permissions:** top-level `permissions` claim and Keycloak Authorization Services `authorization.permissions` (normalized to `resource:scope`)
+
+UI helpers:
+
+- [`src/shared/lib/auth-role.ts`](../src/shared/lib/auth-role.ts) derives the template `Role` from `roles[]` (and optional singular `role` claim).
+- [`src/shared/lib/hooks/use-permission.ts`](../src/shared/lib/hooks/use-permission.ts) checks **token permissions first**, then static RBAC in [`permissions.ts`](../src/shared/lib/permissions.ts) for UX only.
+
+**APIs must enforce authorization server-side** — frontend checks are never sufficient.
+
+## Route guards
+
+Protected routes use `beforeLoad`:
 
 ```ts
 beforeLoad: async () => {
@@ -66,27 +86,32 @@ beforeLoad: async () => {
 }
 ```
 
-The next template step should extend `authGuard` to accept required roles, scopes, or permissions:
+- **Keycloak:** `authGuard` calls `authClient.login()` with the current URL as return target (OIDC redirect).
+- **Mock:** redirects to `/login?redirect=/path`.
 
-```ts
-beforeLoad: async () => {
-  await authGuard({
-    requireAuth: true,
-    roles: ['finance-user'],
-    permissions: ['finance:read'],
-  })
-}
-```
+## Token lifecycle and HTTP
 
-## API Requests
+- `authClient.getAccessToken()` / `getSession()` refresh tokens with a **30s** minimum validity via `updateToken`.
+- [`attachKeycloakSessionSync`](../src/shared/lib/keycloak-auth.ts) registers Keycloak `onTokenExpired`, `onAuthSuccess`, and `onAuthLogout` to **refresh session context** (and invalidate legacy `['session']` query keys if used).
+- [`httpClient`](../src/shared/api/http-client.ts) on **401** attempts `authClient.updateToken(30)` once and **retries** the request with a new bearer token.
 
-`httpClient` calls `getAuthToken()`, which delegates to `authClient.getAccessToken()`. In Keycloak mode this refreshes the token with a 30 second minimum validity before returning the bearer token.
+## Login and registration UI
 
-## Migration For Existing Services
+When `VITE_AUTH_MODE=keycloak`, [`LoginPage`](../src/pages/auth/login/index.tsx) shows **Continue with SSO** instead of a local password form. [`RegisterPage`](../src/pages/auth/register/index.tsx) uses `authClient.signUp.email` → Keycloak self-service registration.
 
-1. Upgrade to this template version while keeping `VITE_AUTH_MODE=mock`.
-2. Register the service client in Keycloak.
-3. Add the Keycloak env values to the service environment.
-4. Switch only one environment to `VITE_AUTH_MODE=keycloak`.
-5. Validate login, logout, route protection, API bearer token, 401 behavior, and role mapping.
-6. Roll the same env change to the remaining environments.
+## Migration for existing services
+
+1. Upgrade the template while keeping `VITE_AUTH_MODE=mock`.
+2. Register the SPA client in Keycloak and configure redirect URIs + silent SSO URL.
+3. Add Keycloak env vars per environment.
+4. Switch **one** non-production environment to `keycloak` and run through login, logout, protected routes, API calls, and 401 refresh.
+5. Align realm/client **role names** with [`ROLES`](../src/shared/lib/permissions.ts) or rely on token **permissions** for fine-grained UI.
+6. Roll out to remaining environments; tag the template (`template/vX.Y.Z`) and read [`CHANGELOG-template.md`](../CHANGELOG-template.md) + [`docs/migrations/`](./migrations/).
+
+## Manual QA checklist (Keycloak)
+
+- [ ] Silent SSO page loads without console errors (`check-sso` mode).
+- [ ] First visit anonymous; protected route triggers login; return URL correct.
+- [ ] Logout clears app session and Keycloak session (verify IdP behavior).
+- [ ] API returns 200 after access token near-expiry (implicitly exercises refresh + optional HTTP retry).
+- [ ] Roles/permissions in JWT match UI visibility (admin vs user paths).

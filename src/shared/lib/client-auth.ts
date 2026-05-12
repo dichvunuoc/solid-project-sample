@@ -66,7 +66,7 @@ const mockAuthClient: AuthClient = {
     email: mockAuth.signIn.email,
   },
   signOut: mockAuth.signOut,
-  getSession: mockAuth.getSession as AuthClient['getSession'],
+  getSession: mockAuth.getSession,
   getAccessToken: async () => {
     const session = await mockAuth.getSession()
     return session?.session.token ?? null

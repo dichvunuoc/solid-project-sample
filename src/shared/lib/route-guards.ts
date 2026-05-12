@@ -5,6 +5,7 @@
  */
 
 import { redirect } from '@tanstack/react-router'
+import { env } from '@/shared/config/env'
 import { authClient } from './client-auth'
 
 /**
@@ -20,19 +21,35 @@ export async function requireAuth(): Promise<boolean> {
   }
 }
 
+function buildReturnUrl(): string {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+  return `${window.location.origin}${window.location.pathname}${window.location.search}`
+}
+
 /**
- * Route guard for protected routes
- * Redirects to login if not authenticated
+ * Route guard for protected routes.
+ * - Keycloak: starts OIDC login with return URL (SSO session may already exist).
+ * - Mock / other: redirects to `/login` with `redirect` search param.
  */
 export async function authGuard(): Promise<void> {
   const isAuthenticated = await requireAuth()
-  if (!isAuthenticated) {
-    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/dashboard'
-    throw redirect({
-      to: '/login',
-      search: {
-        redirect: currentPath,
-      },
-    })
+  if (isAuthenticated) {
+    return
   }
+
+  if (env.VITE_AUTH_MODE === 'keycloak') {
+    const returnTo = buildReturnUrl() || undefined
+    await authClient.login(returnTo)
+    return
+  }
+
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/dashboard'
+  throw redirect({
+    to: '/login',
+    search: {
+      redirect: currentPath,
+    },
+  })
 }

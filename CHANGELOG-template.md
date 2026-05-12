@@ -15,20 +15,39 @@ Consumers fork or sync this repo as a baseline for **UI-only** services (see [RE
 
 _(Nothing pending — next edits go here.)_
 
-### Released in working tree (document when you tag)
+### Added / changed (working tree — copy into next `template/v…` section when you tag)
 
-- **Auth contract:** Added `VITE_AUTH_MODE`, Keycloak env validation, a stable `authClient` facade, and a `keycloak-js` SSO adapter skeleton.
-- **SSO docs:** Added `docs/auth-keycloak.md` and `/silent-check-sso.html` for Keycloak `check-sso`.
-- **SPA-only:** Removed Prisma, Better Auth, `src/routes/api/`, `prisma/`, and stub DB clients; auth is backend-owned — see README + `client-auth.ts`.
-- **Tooling:** ESLint 9 flat (`eslint.config.mjs`), Vitest 2, `@tanstack/router-cli` + `routes:generate` + `pretypecheck` / `pretest:run`.
-- **Vite:** Dev and preview on port **3000** (Playwright-aligned); `routeTree.gen.ts` committed and removed from `.gitignore`.
-- **CI:** GitHub Actions workflow lint, typecheck, Vitest, Playwright Chromium.
-- **Docs:** README / `.env.example` / `CHANGELOG-template.md` / `RELEASING.md` / `docs/data-models.md` / `docs/QUICK_START.md` banner updated for micro-UI + external API.
+_(Nothing yet.)_
 
 ---
 
-_Add version blocks below when you tag releases, for example:_
+## template/v1.1.0 — 2026-05-12
+
+### Summary
+
+IAM alignment for Keycloak SSO, session refresh wiring, HTTP 401 token retry, Playwright isolation on port **4173**, and documentation updates.
+
+### Migrate
+
+1. **Playwright / CI:** Default E2E `baseURL` and `webServer` now use `http://localhost:4173`. Remove `VITE_E2E_BASE_URL=http://localhost:3000` from CI unless you intentionally override. Local `npm run dev` remains on port **3000**.
+2. **Route `/login`:** Optional validated search param `redirect` (string). Deep links may use `/login?redirect=/dashboard`.
+3. **`authGuard()`:** In `VITE_AUTH_MODE=keycloak`, unauthenticated users are sent through **`authClient.login()`** (OIDC) instead of only `/login`.
+4. **Removed** unused `src/app/middleware.ts` — references in internal docs were updated; delete any fork-local imports.
+5. **Mock session shape:** `getSession()` no longer returns internal `User`/`Session` types; it returns `AuthSessionData` with `user.roles: ['user']` for RBAC hooks.
+6. **New modules:** `src/shared/lib/auth-role.ts` (`deriveAppRoleFromSession`), `attachKeycloakSessionSync` in `keycloak-auth.ts`, `e2e/helpers/mock-login.ts`.
+
+### Details
+
+- **RBAC:** `deriveAppRoleFromSession` maps Keycloak `roles[]` to template `Role`; permission hooks honor JWT `permissions` then static `permissions.ts`.
+- **Keycloak:** `attachKeycloakSessionSync` invalidates session context on token/auth events; `httpClient` retries once after `401` when `updateToken` succeeds.
+- **Docs:** Expanded `docs/auth-keycloak.md`, `.env.example` Keycloak/Sentry alignment, migration notes in `docs/migrations/template-v1.1.0.md`.
+
+---
 
 ## template/v1.0.0 — YYYY-MM-DD
 
 - Initial changelog structure for template consumers.
+
+---
+
+_Add new version blocks above when you tag releases._

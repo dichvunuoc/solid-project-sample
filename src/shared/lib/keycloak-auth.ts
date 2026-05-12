@@ -71,6 +71,34 @@ async function initKeycloak(): Promise<boolean> {
   return initPromise
 }
 
+/**
+ * Subscribe to Keycloak session lifecycle so cached session data stays fresh.
+ * Safe to call once at app startup; no-ops when not in Keycloak mode or when config is missing.
+ */
+export function attachKeycloakSessionSync(onInvalidate: () => void): void {
+  if (env.VITE_AUTH_MODE !== 'keycloak') {
+    return
+  }
+
+  void getKeycloak()
+    .then(kc => {
+      kc.onTokenExpired = () => {
+        void kc.updateToken(30).finally(() => {
+          onInvalidate()
+        })
+      }
+      kc.onAuthLogout = () => {
+        onInvalidate()
+      }
+      kc.onAuthSuccess = () => {
+        onInvalidate()
+      }
+    })
+    .catch(() => {
+      // Missing Keycloak env or failed load — dev may run without IAM
+    })
+}
+
 function readParsedToken(kc: Keycloak): ParsedToken {
   return (kc.tokenParsed ?? {}) as ParsedToken
 }

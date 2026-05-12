@@ -23,7 +23,7 @@ The project follows a strict FSD layer hierarchy:
 
 ```
 src/
-├── app/           # Application initialization, providers, middleware
+├── app/           # Application initialization, providers
 ├── pages/         # Page components (route entry points)
 ├── widgets/       # Complex UI blocks (currently empty, reserved)
 ├── features/      # Business features & user interactions
@@ -50,7 +50,7 @@ app ──→ pages ──→ widgets ──→ features ──→ entities ─�
 **Files Analyzed:**
 
 - `providers.tsx` - Global provider composition
-- `middleware.ts` - Auth middleware
+- `providers.tsx` - Global providers (Query, session, toasts)
 - `root.tsx` - Root component
 - `providers/query-provider.tsx`
 - `providers/event-registry.tsx`

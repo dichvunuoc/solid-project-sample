@@ -1,25 +1,47 @@
 import { useState } from 'react'
-import { useNavigate, Link } from '@tanstack/react-router'
-import { authClient } from '@/shared/lib/client-auth'
+import { getRouteApi, Link, useRouter } from '@tanstack/react-router'
+import { useSessionContext } from '@/entities/session/ui/session-provider'
+import { env } from '@/shared/config/env'
 import { toast } from '@/shared/lib/toast'
 
+const loginRouteApi = getRouteApi('/login')
+
 export function LoginPage() {
+  const { redirect: redirectTo } = loginRouteApi.useSearch()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const navigate = useNavigate()
+  const router = useRouter()
+  const { login, loginSso } = useSessionContext()
+
+  const afterLoginPath = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard'
+
+  const handleSsoLogin = async () => {
+    setIsLoading(true)
+    try {
+      const returnUrl =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}${afterLoginPath}`
+          : afterLoginPath
+      await loginSso(returnUrl)
+    } catch (error) {
+      console.error('SSO login error:', error)
+      toast.error(
+        'Sign-in failed',
+        error instanceof Error ? error.message : 'Could not start single sign-on.'
+      )
+      setIsLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      await authClient.signIn.email({
-        email,
-        password,
-      })
+      await login(email, password)
       toast.success('Login successful', 'Welcome back!')
-      navigate({ to: '/dashboard' })
+      router.history.push(afterLoginPath)
     } catch (error) {
       console.error('Login error:', error)
       toast.error(
@@ -29,6 +51,37 @@ export function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (env.VITE_AUTH_MODE === 'keycloak') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full space-y-8 p-8">
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Sign in
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              This application uses your organization&apos;s single sign-on (Keycloak).
+            </p>
+          </div>
+          <div className="mt-8 space-y-4">
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={() => void handleSsoLogin()}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            >
+              {isLoading ? 'Redirecting…' : 'Continue with SSO'}
+            </button>
+            <p className="text-center text-sm text-gray-600">
+              After sign-in you will return to{' '}
+              <span className="font-medium text-gray-900">{afterLoginPath}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -45,7 +98,7 @@ export function LoginPage() {
             </Link>
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={e => void handleSubmit(e)}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
