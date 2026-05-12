@@ -1,0 +1,97 @@
+import eslint from '@eslint/js'
+import eslintConfigPrettier from 'eslint-config-prettier'
+import importPlugin from 'eslint-plugin-import'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
+import reactPlugin from 'eslint-plugin-react'
+import reactHooks from 'eslint-plugin-react-hooks'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+
+export default tseslint.config(
+  {
+    ignores: [
+      'dist',
+      'node_modules',
+      'coverage',
+      'playwright-report',
+      'src/routeTree.gen.ts',
+      '_bmad/**',
+      '**/*.timestamp_*.js',
+      '**/*.timestamp-*.mjs',
+    ],
+  },
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  reactPlugin.configs.flat.recommended,
+  reactPlugin.configs.flat['jsx-runtime'],
+  {
+    settings: {
+      react: { version: '18.3' },
+    },
+  },
+  jsxA11y.flatConfigs.recommended,
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      import: importPlugin,
+    },
+    settings: {
+      'import/resolver': {
+        typescript: { alwaysTryTypes: true, project: './tsconfig.json' },
+        node: { extensions: ['.js', '.jsx', '.ts', '.tsx'] },
+      },
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react/prop-types': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'import/order': [
+        'warn',
+        {
+          groups: [
+            'builtin',
+            'external',
+            'internal',
+            ['parent', 'sibling'],
+            'index',
+            'object',
+            'type',
+          ],
+          pathGroups: [
+            { pattern: 'react', group: 'external', position: 'before' },
+            { pattern: '@/app/**', group: 'internal', position: 'after' },
+            { pattern: '@/pages/**', group: 'internal', position: 'after' },
+            { pattern: '@/widgets/**', group: 'internal', position: 'after' },
+            { pattern: '@/features/**', group: 'internal', position: 'after' },
+            { pattern: '@/entities/**', group: 'internal', position: 'after' },
+            { pattern: '@/shared/**', group: 'internal', position: 'after' },
+          ],
+          pathGroupsExcludedImportTypes: ['react'],
+          'newlines-between': 'never',
+          alphabetize: { order: 'asc', caseInsensitive: true },
+        },
+      ],
+      'import/no-unresolved': 'error',
+      'import/no-duplicates': 'warn',
+    },
+  },
+  {
+    files: ['**/*.config.{ts,js}', 'postcss.config.js'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  eslintConfigPrettier,
+)
