@@ -1,5 +1,5 @@
-import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { splitProps, type ComponentProps, type JSX } from 'solid-js'
 import { cn } from '@/shared/lib/utils'
 
 const alertVariants = cva(
@@ -12,39 +12,44 @@ const alertVariants = cva(
           'border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive',
       },
     },
-    defaultVariants: {
-      variant: 'default',
-    },
+    defaultVariants: { variant: 'default' },
   }
 )
 
-const Alert = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
->(({ className, variant, ...props }, ref) => (
-  <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props} />
-))
-Alert.displayName = 'Alert'
+interface AlertProps
+  extends Omit<ComponentProps<'div'>, 'class'>,
+    VariantProps<typeof alertVariants> {
+  class?: string
+}
 
-const AlertTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, children, ...props }, ref) => (
-    <h5
-      ref={ref}
-      className={cn('mb-1 font-medium leading-none tracking-tight', className)}
-      {...props}
-    >
-      {children}
+function Alert(props: AlertProps) {
+  const [local, rest] = splitProps(props, ['class', 'variant'])
+  return (
+    <div
+      role="alert"
+      class={cn(alertVariants({ variant: local.variant }), local.class)}
+      {...rest}
+    />
+  )
+}
+
+interface AlertTitleProps extends Omit<ComponentProps<'h5'>, 'class' | 'children'> {
+  class?: string
+  children?: JSX.Element
+}
+
+function AlertTitle(props: AlertTitleProps) {
+  const [local, rest] = splitProps(props, ['class', 'children'])
+  return (
+    <h5 class={cn('mb-1 font-medium leading-none tracking-tight', local.class)} {...rest}>
+      {local.children}
     </h5>
   )
-)
-AlertTitle.displayName = 'AlertTitle'
+}
 
-const AlertDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('text-sm [&_p]:leading-relaxed', className)} {...props} />
-))
-AlertDescription.displayName = 'AlertDescription'
+function AlertDescription(props: ComponentProps<'div'>) {
+  const [local, rest] = splitProps(props, ['class'])
+  return <div class={cn('text-sm [&_p]:leading-relaxed', local.class)} {...rest} />
+}
 
 export { Alert, AlertTitle, AlertDescription }

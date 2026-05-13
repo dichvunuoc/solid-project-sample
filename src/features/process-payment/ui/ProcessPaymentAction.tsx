@@ -1,12 +1,10 @@
 /**
- * Process Payment Action Component
+ * Process Payment Action — Solid edition.
  *
- * UI component that triggers payment processing via the feature model.
- *
- * FSD Rule: Feature UI components trigger actions, not business logic.
+ * UI shim that calls into the feature model and surfaces the result.
  */
 
-import { useState } from 'react'
+import { Show, createSignal } from 'solid-js'
 import { Button } from '@/shared/ui'
 import { useProcessPayment } from '../model/use-process-payment'
 
@@ -17,23 +15,18 @@ interface ProcessPaymentActionProps {
   paymentMethod?: string
 }
 
-export function ProcessPaymentAction({
-  orderId = `order-${Date.now()}`,
-  amount = 99.99,
-  userId = 'user-1',
-  paymentMethod = 'credit_card',
-}: ProcessPaymentActionProps) {
+export function ProcessPaymentAction(props: ProcessPaymentActionProps) {
   const { processPayment, isProcessing } = useProcessPayment()
-  const [lastResult, setLastResult] = useState<'success' | 'failed' | null>(null)
+  const [lastResult, setLastResult] = createSignal<'success' | 'failed' | null>(null)
 
   const handleProcessPayment = async () => {
+    setLastResult(null)
     try {
-      setLastResult(null)
       await processPayment({
-        orderId,
-        amount,
-        userId,
-        paymentMethod,
+        orderId: props.orderId ?? `order-${Date.now()}`,
+        amount: props.amount ?? 99.99,
+        userId: props.userId ?? 'user-1',
+        paymentMethod: props.paymentMethod ?? 'credit_card',
       })
       setLastResult('success')
     } catch {
@@ -42,23 +35,25 @@ export function ProcessPaymentAction({
   }
 
   return (
-    <div className="space-y-2">
+    <div class="space-y-2">
       <Button
         onClick={handleProcessPayment}
-        disabled={isProcessing}
+        disabled={isProcessing()}
         variant="default"
-        className="w-full"
+        class="w-full"
       >
-        {isProcessing ? 'Processing...' : 'Process Payment'}
+        <Show when={isProcessing()} fallback="Process Payment">
+          Processing...
+        </Show>
       </Button>
-      {lastResult === 'success' && (
-        <div className="text-sm text-green-600 dark:text-green-500">
+      <Show when={lastResult() === 'success'}>
+        <div class="text-sm text-green-600 dark:text-green-500">
           Payment processed successfully!
         </div>
-      )}
-      {lastResult === 'failed' && (
-        <div className="text-sm text-destructive">Payment failed. Please try again.</div>
-      )}
+      </Show>
+      <Show when={lastResult() === 'failed'}>
+        <div class="text-sm text-destructive">Payment failed. Please try again.</div>
+      </Show>
     </div>
   )
 }

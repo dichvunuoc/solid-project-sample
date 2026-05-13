@@ -9,11 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RiskDashboardRouteImport } from './routes/risk-dashboard'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RiskNewRouteImport } from './routes/risk.new'
 
+const RiskDashboardRoute = RiskDashboardRouteImport.update({
+  id: '/risk-dashboard',
+  path: '/risk-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -34,18 +41,27 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RiskNewRoute = RiskNewRouteImport.update({
+  id: '/risk/new',
+  path: '/risk/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/risk-dashboard': typeof RiskDashboardRoute
+  '/risk/new': typeof RiskNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/risk-dashboard': typeof RiskDashboardRoute
+  '/risk/new': typeof RiskNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +69,34 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/risk-dashboard': typeof RiskDashboardRoute
+  '/risk/new': typeof RiskNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login' | '/register'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/risk-dashboard'
+    | '/risk/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/register'
-  id: '__root__' | '/' | '/dashboard' | '/login' | '/register'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/risk-dashboard'
+    | '/risk/new'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/risk-dashboard'
+    | '/risk/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +104,19 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  RiskDashboardRoute: typeof RiskDashboardRoute
+  RiskNewRoute: typeof RiskNewRoute
 }
 
-declare module '@tanstack/react-router' {
+declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
+    '/risk-dashboard': {
+      id: '/risk-dashboard'
+      path: '/risk-dashboard'
+      fullPath: '/risk-dashboard'
+      preLoaderRoute: typeof RiskDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -99,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/risk/new': {
+      id: '/risk/new'
+      path: '/risk/new'
+      fullPath: '/risk/new'
+      preLoaderRoute: typeof RiskNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +160,8 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  RiskDashboardRoute: RiskDashboardRoute,
+  RiskNewRoute: RiskNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

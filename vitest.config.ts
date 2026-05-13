@@ -1,24 +1,30 @@
 import path from 'path'
-import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
-import react from '@vitejs/plugin-react'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
+import solid from 'vite-plugin-solid'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [
-    react(),
-    TanStackRouterVite({
+    tanstackRouter({
+      target: 'solid',
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
+      autoCodeSplitting: false,
     }),
+    solid(),
   ],
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
-    /** Playwright owns `e2e/`; Vitest only runs unit tests under `src/`. */
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+    server: {
+      deps: {
+        inline: [/solid-js/, /@solidjs\/testing-library/],
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -33,6 +39,7 @@ export default defineConfig({
     },
   },
   resolve: {
+    conditions: ['development', 'browser'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@/app': path.resolve(__dirname, './src/app'),

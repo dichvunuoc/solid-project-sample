@@ -6,7 +6,7 @@
  * FSD Rule: Entity layer defines data fetching logic.
  */
 
-import { queryOptions } from '@tanstack/react-query'
+import { queryOptions } from '@tanstack/solid-query'
 import { queryKeys } from '@/shared/api/query-keys'
 import type { DashboardStats, Order } from '../model/types'
 

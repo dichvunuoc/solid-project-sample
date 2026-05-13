@@ -1,12 +1,5 @@
-import { lazy } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-
-const RegisterPage = lazy(() =>
-  import('@/pages/auth/register').then(module => ({
-    default: module.RegisterPage,
-  }))
-)
+import { createFileRoute, lazyRouteComponent } from '@tanstack/solid-router'
 
 export const Route = createFileRoute('/register')({
-  component: RegisterPage,
+  component: lazyRouteComponent(() => import('@/pages/auth/register'), 'RegisterPage'),
 })

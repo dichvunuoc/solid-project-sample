@@ -1,56 +1,50 @@
-/**
- * Radio Component
- *
- * Reusable radio button component that integrates with React Hook Form.
- * Use RadioGroup for multiple radio options.
- */
+import { Show, splitProps, type ComponentProps } from 'solid-js'
 
-import { forwardRef } from 'react'
-import type { InputHTMLAttributes } from 'react'
-
-export interface RadioProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface RadioProps extends Omit<ComponentProps<'input'>, 'class' | 'type'> {
   label?: string
   error?: string
   helperText?: string
+  class?: string
 }
 
-export const Radio = forwardRef<HTMLInputElement, RadioProps>(
-  ({ label, error, helperText, className = '', ...props }, ref) => {
-    const baseStyles = 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 transition-colors'
-    const errorStyles = 'border-red-300 focus:ring-red-500'
+export function Radio(props: RadioProps) {
+  const [local, rest] = splitProps(props, ['label', 'error', 'helperText', 'class'])
 
-    return (
-      <div className="w-full">
-        <div className="flex items-start">
-          <input
-            ref={ref}
-            type="radio"
-            className={`${baseStyles} ${error ? errorStyles : ''} ${className}`}
-            aria-describedby={
-              error || helperText ? `${props.id}-${error ? 'error' : 'helper'}` : undefined
-            }
-            {...props}
-          />
-          {label && (
-            <label htmlFor={props.id} className="ml-2 block text-sm text-gray-700">
-              {label}
-              {props.required && <span className="text-red-500 ml-1">*</span>}
-            </label>
-          )}
-        </div>
-        {error && (
-          <p id={`${props.id}-error`} className="mt-1 text-sm text-red-600" role="alert">
-            {error}
-          </p>
-        )}
-        {helperText && !error && (
-          <p id={`${props.id}-helper`} className="mt-1 text-sm text-gray-500">
-            {helperText}
-          </p>
-        )}
+  const base = 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 transition-colors'
+  const errorCls = 'border-red-300 focus:ring-red-500'
+
+  return (
+    <div class="w-full">
+      <div class="flex items-start">
+        <input
+          type="radio"
+          class={`${base} ${local.error ? errorCls : ''} ${local.class ?? ''}`}
+          aria-describedby={
+            local.error || local.helperText
+              ? `${rest.id}-${local.error ? 'error' : 'helper'}`
+              : undefined
+          }
+          {...rest}
+        />
+        <Show when={local.label}>
+          <label for={rest.id} class="ml-2 block text-sm text-gray-700">
+            {local.label}
+            <Show when={rest.required}>
+              <span class="text-red-500 ml-1">*</span>
+            </Show>
+          </label>
+        </Show>
       </div>
-    )
-  }
-)
-
-Radio.displayName = 'Radio'
+      <Show when={local.error}>
+        <p id={`${rest.id}-error`} class="mt-1 text-sm text-red-600" role="alert">
+          {local.error}
+        </p>
+      </Show>
+      <Show when={!local.error && local.helperText}>
+        <p id={`${rest.id}-helper`} class="mt-1 text-sm text-gray-500">
+          {local.helperText}
+        </p>
+      </Show>
+    </div>
+  )
+}

@@ -1,37 +1,31 @@
 /**
- * Query Provider
+ * Query Provider (Solid).
  *
- * Dedicated provider for TanStack Query (React Query).
- * This separates query client concerns from session management.
+ * Wraps the app in TanStack Solid Query. `QueryClient` is created once at
+ * module scope (acceptable because the app is SPA & singleton).
  */
 
-import { useState, type ReactNode } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { QueryClient, QueryClientProvider } from '@tanstack/solid-query'
+import { SolidQueryDevtools } from '@tanstack/solid-query-devtools'
+import type { JSX } from 'solid-js'
 
-export function QueryProvider({ children }: { children: ReactNode }) {
-  // Use useState with lazy initialization to prevent QueryClient recreation
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 1000 * 60 * 5, // 5 minutes
-            retry: 3,
-            retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-            refetchOnWindowFocus: false,
-          },
-          mutations: {
-            retry: 1,
-          },
-        },
-      })
-  )
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      retry: 3,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnWindowFocus: false,
+    },
+    mutations: { retry: 1 },
+  },
+})
 
+export function QueryProvider(props: { children: JSX.Element }) {
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      {import.meta.env.MODE === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+      {props.children}
+      {import.meta.env.MODE === 'development' && <SolidQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )
 }

@@ -1,44 +1,36 @@
-import * as React from 'react'
-import * as AvatarPrimitive from '@radix-ui/react-avatar'
+import { Image as KImage } from '@kobalte/core/image'
+import { splitProps, type ComponentProps } from 'solid-js'
 import { cn } from '@/shared/lib/utils'
 
-const Avatar = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Root
-    ref={ref}
-    className={cn('relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full', className)}
-    {...props}
-  />
-))
-Avatar.displayName = AvatarPrimitive.Root.displayName
+const Avatar = (props: ComponentProps<typeof KImage> & { class?: string }) => {
+  const [local, rest] = splitProps(props, ['class'])
+  return (
+    <KImage
+      class={cn(
+        'relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full',
+        local.class
+      )}
+      {...rest}
+    />
+  )
+}
 
-const AvatarImage = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Image>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image
-    ref={ref}
-    className={cn('aspect-square h-full w-full', className)}
-    {...props}
-  />
-))
-AvatarImage.displayName = AvatarPrimitive.Image.displayName
+const AvatarImage = (props: ComponentProps<typeof KImage.Img> & { class?: string }) => {
+  const [local, rest] = splitProps(props, ['class'])
+  return <KImage.Img class={cn('aspect-square h-full w-full', local.class)} {...rest} />
+}
 
-const AvatarFallback = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Fallback>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Fallback
-    ref={ref}
-    className={cn(
-      'flex h-full w-full items-center justify-center rounded-full bg-muted',
-      className
-    )}
-    {...props}
-  />
-))
-AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
+const AvatarFallback = (props: ComponentProps<typeof KImage.Fallback> & { class?: string }) => {
+  const [local, rest] = splitProps(props, ['class'])
+  return (
+    <KImage.Fallback
+      class={cn(
+        'flex h-full w-full items-center justify-center rounded-full bg-muted',
+        local.class
+      )}
+      {...rest}
+    />
+  )
+}
 
 export { Avatar, AvatarImage, AvatarFallback }

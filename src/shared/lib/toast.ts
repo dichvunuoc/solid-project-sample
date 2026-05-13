@@ -5,7 +5,7 @@
  * FSD Rule: This is in the Shared layer, accessible to all layers.
  */
 
-import { toast as sonnerToast } from 'sonner'
+import { toast as sonnerToast } from 'solid-sonner'
 
 export const toast = {
   success: (message: string, description?: string) => {

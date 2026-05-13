@@ -1,21 +1,20 @@
 /**
- * Process Rewards Feature - Reward Chain Hook
+ * Reward chain — Solid edition.
  *
- * This feature subscribes to events from the shared event bus and processes rewards.
- *
- * FSD Rule: Features can import from Entities and Shared layers.
- * This feature listens to post:liked events and processes rewards.
+ * Subscribes to `post:liked` bus events, calls the reward microservice via
+ * `@tanstack/solid-query`'s `useMutation`, then forwards a
+ * `reward:processed` / `reward:failed` event back onto the bus.
  */
 
-import { useEffect, useCallback } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/solid-query'
+import { onCleanup, onMount } from 'solid-js'
 import { httpClient } from '@/shared/api/http-client'
 import { eventBus } from '@/shared/lib/events/bus'
 import {
-  PostLikedEvent,
-  RewardProcessedEvent,
-  RewardFailedEvent,
   POST_LIKED,
+  PostLikedEvent,
+  RewardFailedEvent,
+  RewardProcessedEvent,
 } from '@/shared/lib/events/registry'
 
 interface ProcessRewardParams {
@@ -30,32 +29,18 @@ interface ProcessRewardResponse {
   success: boolean
 }
 
-/**
- * Process reward via microservice
- */
 async function processRewardMicroservice(
   params: ProcessRewardParams
 ): Promise<ProcessRewardResponse> {
-  // Use centralized HTTP client
   return httpClient.post<ProcessRewardResponse>('/api/rewards/process', params, {
-    skipErrorToast: true, // Handle errors in the mutation's onError
+    skipErrorToast: true,
   })
 }
 
-/**
- * Hook that sets up the reward processing chain
- *
- * Listens to 'post:liked' events and:
- * 1. Calls the reward microservice
- * 2. Emits 'reward:processed' or 'reward:failed' events
- *
- * @returns Mutation object for manual reward processing (optional)
- */
 export function useRewardChain() {
-  const mutation = useMutation<ProcessRewardResponse, Error, ProcessRewardParams>({
+  const mutation = useMutation(() => ({
     mutationFn: processRewardMicroservice,
     onSuccess: (data: ProcessRewardResponse, variables: ProcessRewardParams) => {
-      // Emit success event
       const event = new RewardProcessedEvent({
         userId: variables.userId,
         rewardId: data.rewardId,
@@ -65,7 +50,6 @@ export function useRewardChain() {
       eventBus.emit(event.eventName, event)
     },
     onError: (error: Error, variables: ProcessRewardParams) => {
-      // Emit failure event
       const event = new RewardFailedEvent({
         userId: variables.userId,
         reason: `Failed to process reward for post ${variables.postId}`,
@@ -73,38 +57,29 @@ export function useRewardChain() {
       })
       eventBus.emit(event.eventName, event)
     },
-  })
+  }))
 
-  // Create a stable callback for processing rewards
-  const processReward = useCallback(
-    (params: ProcessRewardParams) => {
-      mutation.mutate(params)
-    },
-    [mutation]
-  )
+  const processReward = (params: ProcessRewardParams) => mutation.mutate(params)
 
-  useEffect(() => {
-    // Subscribe to post:liked events
+  onMount(() => {
     const handlePostLiked = (payload: PostLikedEvent) => {
-      // Process the reward when a post is liked
       processReward({
         userId: payload.userId,
         postId: payload.postId,
         action: 'like',
       })
     }
-
     eventBus.on(POST_LIKED, handlePostLiked)
-
-    // Cleanup subscription on unmount
-    return () => {
-      eventBus.off(POST_LIKED, handlePostLiked)
-    }
-  }, [processReward])
+    onCleanup(() => eventBus.off(POST_LIKED, handlePostLiked))
+  })
 
   return {
     processReward,
-    isProcessing: mutation.isPending,
-    error: mutation.error,
+    get isProcessing() {
+      return mutation.isPending
+    },
+    get error() {
+      return mutation.error
+    },
   }
 }

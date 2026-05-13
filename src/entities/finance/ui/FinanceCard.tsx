@@ -1,50 +1,18 @@
 /**
- * Finance Card Component
+ * Finance overview card — Solid edition.
  *
- * Pure presentational component for displaying finance statistics.
- *
- * FSD Rule: Entity UI components are presentational only.
+ * Reads `dashboardStatsQueryOptions` via `@tanstack/solid-query`. Renders
+ * fine-grained: only the affected number changes when stats refresh.
  */
 
-import { useQuery } from '@tanstack/react-query'
-import { Card, CardHeader, CardTitle, CardContent, Spinner } from '@/shared/ui'
+import { useQuery } from '@tanstack/solid-query'
+import { For, Match, Show, Switch } from 'solid-js'
+import { Card, CardContent, CardHeader, CardTitle, Spinner } from '@/shared/ui'
 import { dashboardStatsQueryOptions } from '../api/queries'
 import type { Stat } from '../model/types'
 
 export function FinanceCard() {
-  const { data, isLoading, error } = useQuery(dashboardStatsQueryOptions)
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Finance Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Spinner />
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Finance Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-destructive">Error loading finance data</div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (!data) {
-    return null
-  }
+  const query = useQuery(() => dashboardStatsQueryOptions)
 
   return (
     <Card>
@@ -52,65 +20,76 @@ export function FinanceCard() {
         <CardTitle>Finance Overview</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {/* Main Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {data.stats.map(stat => (
-              <StatCard key={stat.id} stat={stat} />
-            ))}
-          </div>
-
-          {/* Summary */}
-          <div className="border-t pt-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Total Revenue:</span>
-                <span className="ml-2 font-semibold">
-                  $
-                  {data.totalRevenue.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Total Orders:</span>
-                <span className="ml-2 font-semibold">{data.totalOrders.toLocaleString()}</span>
-              </div>
+        <Switch>
+          <Match when={query.isLoading}>
+            <div class="flex items-center justify-center py-8">
+              <Spinner />
             </div>
-          </div>
-        </div>
+          </Match>
+          <Match when={query.error}>
+            <div class="text-destructive">Error loading finance data</div>
+          </Match>
+          <Match when={query.data}>
+            {data => (
+              <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <For each={data().stats}>{stat => <StatCard stat={stat} />}</For>
+                </div>
+                <div class="border-t pt-4">
+                  <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span class="text-muted-foreground">Total Revenue:</span>
+                      <span class="ml-2 font-semibold">
+                        $
+                        {data().totalRevenue.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground">Total Orders:</span>
+                      <span class="ml-2 font-semibold">
+                        {data().totalOrders.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Match>
+        </Switch>
       </CardContent>
     </Card>
   )
 }
 
-function StatCard({ stat }: { stat: Stat }) {
-  const formatValue = (value: number, currency = false) => {
-    if (currency) {
-      return `$${value.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`
-    }
-    return value.toLocaleString()
-  }
+function StatCard(props: { stat: Stat }) {
+  const formatValue = (value: number, currency = false) =>
+    currency
+      ? `$${value.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : value.toLocaleString()
 
   return (
-    <div className="bg-muted rounded-lg p-4">
-      <div className="text-sm text-muted-foreground mb-1">{stat.label}</div>
-      <div className="text-2xl font-bold mb-1">{formatValue(stat.value, stat.currency)}</div>
-      {stat.change !== undefined && (
+    <div class="bg-muted rounded-lg p-4">
+      <div class="text-sm text-muted-foreground mb-1">{props.stat.label}</div>
+      <div class="text-2xl font-bold mb-1">
+        {formatValue(props.stat.value, props.stat.currency)}
+      </div>
+      <Show when={props.stat.change !== undefined}>
         <div
-          className={`text-sm ${
-            stat.changeType === 'increase'
+          class={`text-sm ${
+            props.stat.changeType === 'increase'
               ? 'text-green-600 dark:text-green-500'
               : 'text-red-600 dark:text-red-500'
           }`}
         >
-          {stat.changeType === 'increase' ? '↑' : '↓'} {Math.abs(stat.change)}%
+          {props.stat.changeType === 'increase' ? '↑' : '↓'} {Math.abs(props.stat.change ?? 0)}%
         </div>
-      )}
+      </Show>
     </div>
   )
 }

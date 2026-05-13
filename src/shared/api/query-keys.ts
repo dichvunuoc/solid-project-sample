@@ -24,4 +24,12 @@ export const queryKeys = {
   order: {
     detail: (orderId: string) => ['order', orderId] as const,
   },
+  riskOpportunity: {
+    all: () => ['risk-opportunity'] as const,
+    list: (filters?: Record<string, unknown>) =>
+      filters && Object.keys(filters).length > 0
+        ? (['risk-opportunity', 'list', filters] as const)
+        : (['risk-opportunity', 'list'] as const),
+    detail: (id: string) => ['risk-opportunity', 'detail', id] as const,
+  },
 } as const

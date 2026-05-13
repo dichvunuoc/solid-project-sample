@@ -1,29 +1,27 @@
-'use client'
-
-import * as React from 'react'
-import * as TooltipPrimitive from '@radix-ui/react-tooltip'
+import { Tooltip as KTooltip } from '@kobalte/core/tooltip'
+import { splitProps, type ComponentProps } from 'solid-js'
 import { cn } from '@/shared/lib/utils'
 
-const TooltipProvider = TooltipPrimitive.Provider
+const TooltipProvider = (props: ComponentProps<typeof KTooltip>) => <KTooltip {...props} />
+const Tooltip = KTooltip
+const TooltipTrigger = KTooltip.Trigger
 
-const Tooltip = TooltipPrimitive.Root
-
-const TooltipTrigger = TooltipPrimitive.Trigger
-
-const TooltipContent = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
-  <TooltipPrimitive.Content
-    ref={ref}
-    sideOffset={sideOffset}
-    className={cn(
-      'z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-tooltip-content-transform-origin]',
-      className
-    )}
-    {...props}
-  />
-))
-TooltipContent.displayName = TooltipPrimitive.Content.displayName
+interface TooltipContentProps extends ComponentProps<typeof KTooltip.Content> {
+  class?: string
+}
+const TooltipContent = (props: TooltipContentProps) => {
+  const [local, rest] = splitProps(props, ['class'])
+  return (
+    <KTooltip.Portal>
+      <KTooltip.Content
+        class={cn(
+          'z-50 overflow-hidden rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground animate-in fade-in-0 zoom-in-95',
+          local.class
+        )}
+        {...rest}
+      />
+    </KTooltip.Portal>
+  )
+}
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }

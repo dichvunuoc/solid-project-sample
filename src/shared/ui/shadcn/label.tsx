@@ -1,18 +1,27 @@
-import * as React from 'react'
-import * as LabelPrimitive from '@radix-ui/react-label'
-import { cva, type VariantProps } from 'class-variance-authority'
+/**
+ * Plain Solid label. The legacy Radix `Label.Root` was just a `<label>` with
+ * a tiny click-through helper; in Solid we render the element directly. For
+ * Kobalte form primitives, the dedicated `<TextField.Label>` etc. should be
+ * used instead.
+ */
+
+import { splitProps, type ComponentProps, type JSX } from 'solid-js'
 import { cn } from '@/shared/lib/utils'
 
-const labelVariants = cva(
+const labelClass =
   'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-)
 
-const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & VariantProps<typeof labelVariants>
->(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props} />
-))
-Label.displayName = LabelPrimitive.Root.displayName
+interface LabelProps extends Omit<ComponentProps<'label'>, 'class' | 'children'> {
+  class?: string
+  children?: JSX.Element
+}
 
-export { Label }
+export function Label(props: LabelProps) {
+  const [local, rest] = splitProps(props, ['class', 'children'])
+  // eslint-disable-next-line jsx-a11y/label-has-associated-control -- consumer provides the `for` association
+  return (
+    <label class={cn(labelClass, local.class)} {...rest}>
+      {local.children}
+    </label>
+  )
+}

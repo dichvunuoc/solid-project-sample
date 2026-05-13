@@ -4,7 +4,7 @@
  * Utilities for protecting routes with authentication checks.
  */
 
-import { redirect } from '@tanstack/react-router'
+import { redirect } from '@tanstack/solid-router'
 import { env } from '@/shared/config/env'
 import { authClient } from './client-auth'
 

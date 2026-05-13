@@ -1,53 +1,50 @@
-'use client'
-
-import * as React from 'react'
-import * as AccordionPrimitive from '@radix-ui/react-accordion'
-import { ChevronDown } from 'lucide-react'
+import { Accordion as KAccordion } from '@kobalte/core/accordion'
+import { ChevronDown } from 'lucide-solid'
+import { splitProps, type ComponentProps, type JSX } from 'solid-js'
 import { cn } from '@/shared/lib/utils'
 
-const Accordion = AccordionPrimitive.Root
+const Accordion = KAccordion
 
-const AccordionItem = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
->(({ className, ...props }, ref) => (
-  <AccordionPrimitive.Item ref={ref} className={cn('border-b', className)} {...props} />
-))
-AccordionItem.displayName = 'AccordionItem'
+const AccordionItem = (props: ComponentProps<typeof KAccordion.Item> & { class?: string }) => {
+  const [local, rest] = splitProps(props, ['class'])
+  return <KAccordion.Item class={cn('border-b', local.class)} {...rest} />
+}
 
-const AccordionTrigger = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Header className="flex">
-    <AccordionPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        'flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180',
-        className
+const AccordionTrigger = (
+  props: ComponentProps<typeof KAccordion.Trigger> & { class?: string; children?: JSX.Element }
+) => {
+  const [local, rest] = splitProps(props, ['class', 'children'])
+  return (
+    <KAccordion.Header class="flex">
+      <KAccordion.Trigger
+        class={cn(
+          'flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-expanded]>svg]:rotate-180',
+          local.class
+        )}
+        {...rest}
+      >
+        {local.children}
+        <ChevronDown class="h-4 w-4 shrink-0 transition-transform duration-200" />
+      </KAccordion.Trigger>
+    </KAccordion.Header>
+  )
+}
+
+const AccordionContent = (
+  props: ComponentProps<typeof KAccordion.Content> & { class?: string; children?: JSX.Element }
+) => {
+  const [local, rest] = splitProps(props, ['class', 'children'])
+  return (
+    <KAccordion.Content
+      class={cn(
+        'overflow-hidden text-sm transition-all data-[expanded]:animate-accordion-down data-[closed]:animate-accordion-up',
+        local.class
       )}
-      {...props}
+      {...rest}
     >
-      {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-    </AccordionPrimitive.Trigger>
-  </AccordionPrimitive.Header>
-))
-AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
-
-const AccordionContent = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Content
-    ref={ref}
-    className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
-    {...props}
-  >
-    <div className={cn('pb-4 pt-0', className)}>{children}</div>
-  </AccordionPrimitive.Content>
-))
-
-AccordionContent.displayName = AccordionPrimitive.Content.displayName
+      <div class="pb-4 pt-0">{local.children}</div>
+    </KAccordion.Content>
+  )
+}
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }

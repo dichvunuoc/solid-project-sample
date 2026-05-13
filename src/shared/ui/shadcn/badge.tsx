@@ -1,5 +1,5 @@
-import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { splitProps, type ComponentProps } from 'solid-js'
 import { cn } from '@/shared/lib/utils'
 
 const badgeVariants = cva(
@@ -8,24 +8,25 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80',
-        secondary:
-          'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
         destructive:
           'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
         outline: 'text-foreground',
       },
     },
-    defaultVariants: {
-      variant: 'default',
-    },
+    defaultVariants: { variant: 'default' },
   }
 )
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
-
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
+  extends Omit<ComponentProps<'div'>, 'class'>,
+    VariantProps<typeof badgeVariants> {
+  class?: string
 }
 
-export { Badge, badgeVariants }
+export function Badge(props: BadgeProps) {
+  const [local, rest] = splitProps(props, ['class', 'variant'])
+  return <div class={cn(badgeVariants({ variant: local.variant }), local.class)} {...rest} />
+}
+
+export { badgeVariants }

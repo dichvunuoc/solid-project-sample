@@ -1,6 +1,6 @@
 {
   "name": "frontend-sample",
-  "version": "0.1.0",
+  "version": "0.2.0-solid.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -25,64 +25,48 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
-    "@radix-ui/react-accordion": "^1.2.12",
-    "@radix-ui/react-avatar": "^1.1.11",
-    "@radix-ui/react-checkbox": "^1.3.3",
-    "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-dropdown-menu": "^2.1.16",
-    "@radix-ui/react-label": "^2.1.8",
-    "@radix-ui/react-popover": "^1.1.15",
-    "@radix-ui/react-radio-group": "^1.3.8",
-    "@radix-ui/react-scroll-area": "^1.2.10",
-    "@radix-ui/react-select": "^2.2.6",
-    "@radix-ui/react-separator": "^1.1.8",
-    "@radix-ui/react-slot": "^1.2.4",
-    "@radix-ui/react-tabs": "^1.1.13",
-    "@radix-ui/react-toast": "^1.2.15",
-    "@radix-ui/react-tooltip": "^1.2.8",
-    "@sentry/react": "^10.32.1",
-    "@tanstack/react-query": "^5.90.14",
-    "@tanstack/react-query-devtools": "^5.91.2",
-    "@tanstack/react-router": "^1.144.0",
-    "@tanstack/router-vite-plugin": "^1.144.0",
+    "@kobalte/core": "^0.13.11",
+    "@modular-forms/solid": "^0.25.1",
+    "@sentry/solid": "^10.53.0",
+    "@solid-primitives/event-listener": "^2.4.5",
+    "@solid-primitives/media": "^2.3.5",
+    "@solid-primitives/scheduled": "^1.5.3",
+    "@solid-primitives/storage": "^4.3.4",
+    "@tanstack/router-plugin": "^1.144.0",
+    "@tanstack/solid-query": "^5.90.14",
+    "@tanstack/solid-query-devtools": "^5.91.2",
+    "@tanstack/solid-router": "^1.144.0",
+    "@tanstack/solid-virtual": "^3.13.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.0.0",
     "keycloak-js": "^26.2.4",
-    "lucide-react": "^0.562.0",
+    "lucide-solid": "^1.14.0",
     "mitt": "^3.0.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.69.0",
-    "sonner": "^2.0.7",
+    "solid-js": "^1.9.0",
+    "solid-sonner": "^0.2.8",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "web-vitals": "^5.1.0",
-    "zod": "^4.3.2",
-    "zustand": "^4.5.0"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
     "@playwright/test": "^1.57.0",
+    "@solidjs/testing-library": "^0.8.10",
     "@tanstack/router-cli": "^1.144.0",
     "@testing-library/jest-dom": "^6.1.5",
-    "@testing-library/react": "^14.1.2",
-    "@testing-library/user-event": "^14.5.1",
     "@types/node": "^20.14.10",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
     "@vitest/coverage-v8": "^2.1.6",
     "@vitest/ui": "^2.1.6",
     "autoprefixer": "^10.4.19",
+    "babel-preset-solid": "^1.9.0",
     "eslint": "^9.15.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^3.7.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-react": "^7.37.2",
-    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-solid": "^0.14.5",
     "globals": "^15.12.0",
     "husky": "^9.0.11",
     "jsdom": "^25.0.1",
@@ -95,6 +79,7 @@
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.15.0",
     "vite": "^5.4.11",
+    "vite-plugin-solid": "^2.11.0",
     "vitest": "^2.1.6"
   },
   "lint-staged": {
@@ -105,5 +90,17 @@
     "*.{json,css,md}": [
       "prettier --write"
     ]
-  }
+  },
+  "size-limit": [
+    {
+      "path": "dist/assets/index-*.js",
+      "limit": "120 kB",
+      "gzip": true
+    },
+    {
+      "path": "dist/assets/index-*.css",
+      "limit": "50 kB",
+      "gzip": true
+    }
+  ]
 }

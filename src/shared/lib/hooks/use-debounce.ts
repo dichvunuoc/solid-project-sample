@@ -1,45 +1,30 @@
 /**
- * Debounce Hook
+ * Debounced value accessor for Solid.
  *
- * Delays updating a value until after a specified delay has passed since the last change.
- * Useful for search inputs, API calls, and performance optimization.
- *
- * FSD Rule: This is in the Shared layer, accessible to all layers.
+ * Mirrors the contract of the prior React `useDebounce(value, delay)` hook but
+ * accepts a reactive accessor and returns an accessor — pass any signal/memo in,
+ * read the debounced mirror out.
  */
 
-import { useEffect, useState } from 'react'
+import { debounce } from '@solid-primitives/scheduled'
+import { createMemo, createSignal, onCleanup, type Accessor } from 'solid-js'
 
-/**
- * Debounce a value
- * @param value - Value to debounce
- * @param delay - Delay in milliseconds (default: 500)
- * @returns Debounced value
- *
- * @example
- * ```tsx
- * const [searchTerm, setSearchTerm] = useState('')
- * const debouncedSearchTerm = useDebounce(searchTerm, 500)
- *
- * useEffect(() => {
- *   // This will only run 500ms after the user stops typing
- *   fetchSearchResults(debouncedSearchTerm)
- * }, [debouncedSearchTerm])
- * ```
- */
-export function useDebounce<T>(value: T, delay: number = 500): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+export function useDebounce<T>(value: Accessor<T>, delay: number = 500): Accessor<T> {
+  return createDebouncedAccessor(value, delay)
+}
 
-  useEffect(() => {
-    // Set up a timeout to update the debounced value
-    const handler = setTimeout(() => {
-      setDebouncedValue(value)
-    }, delay)
+export function createDebouncedAccessor<T>(
+  value: Accessor<T>,
+  delay: number = 500
+): Accessor<T> {
+  const [snapshot, setSnapshot] = createSignal<T>(value())
+  const trigger = debounce((v: T) => setSnapshot(() => v), delay)
+  onCleanup(() => trigger.clear())
 
-    // Clean up the timeout if value or delay changes
-    return () => {
-      clearTimeout(handler)
-    }
-  }, [value, delay])
+  createMemo(() => {
+    const next = value()
+    trigger(next)
+  })
 
-  return debouncedValue
+  return snapshot
 }

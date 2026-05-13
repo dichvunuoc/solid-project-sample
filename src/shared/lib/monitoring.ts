@@ -27,7 +27,7 @@ export async function initMonitoring(): Promise<void> {
   if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_ENABLED === 'true') {
     try {
       // Dynamic import to avoid loading Sentry in development
-      const Sentry = await import('@sentry/react')
+      const Sentry = await import('@sentry/solid')
 
       Sentry.init({
         dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -91,7 +91,7 @@ export async function captureException(
   // Send to Sentry in production
   if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_ENABLED === 'true') {
     try {
-      const Sentry = await import('@sentry/react')
+      const Sentry = await import('@sentry/solid')
 
       if (context) {
         Sentry.setContext('additional_info', context)
@@ -130,7 +130,7 @@ export async function captureMessage(
 
   if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_ENABLED === 'true') {
     try {
-      const Sentry = await import('@sentry/react')
+      const Sentry = await import('@sentry/solid')
 
       if (context) {
         Sentry.setContext('additional_info', context)
@@ -154,7 +154,7 @@ export async function setUser(user: {
 }): Promise<void> {
   if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_ENABLED === 'true') {
     try {
-      const Sentry = await import('@sentry/react')
+      const Sentry = await import('@sentry/solid')
       Sentry.setUser(user)
     } catch (e) {
       logger.error('Failed to set user in Sentry:', e)
@@ -168,7 +168,7 @@ export async function setUser(user: {
 export async function clearUser(): Promise<void> {
   if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_ENABLED === 'true') {
     try {
-      const Sentry = await import('@sentry/react')
+      const Sentry = await import('@sentry/solid')
       Sentry.setUser(null)
     } catch (e) {
       logger.error('Failed to clear user in Sentry:', e)
@@ -189,7 +189,7 @@ export async function addBreadcrumb(
 ): Promise<void> {
   if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_ENABLED === 'true') {
     try {
-      const Sentry = await import('@sentry/react')
+      const Sentry = await import('@sentry/solid')
       Sentry.addBreadcrumb({
         message,
         category,
@@ -210,7 +210,7 @@ export async function addBreadcrumb(
 export async function startTransaction(name: string, op: string = 'custom'): Promise<unknown> {
   if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_ENABLED === 'true') {
     try {
-      const Sentry = await import('@sentry/react')
+      const Sentry = await import('@sentry/solid')
       // Use startSpan instead of deprecated startTransaction
       return Sentry.startSpan({ name, op }, span => span)
     } catch (e) {

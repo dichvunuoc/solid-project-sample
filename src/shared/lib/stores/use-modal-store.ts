@@ -1,167 +1,77 @@
 /**
- * Modal Manager Store
+ * Modal manager — Solid edition.
  *
- * Global state management for modals throughout the application.
- * Provides a centralized way to open, close, and manage multiple modals.
+ * Global singleton backed by `createStore`; the Solid store tracks reads at
+ * the level of object keys, so subscribers only re-evaluate when *their*
+ * modal id changes.
  *
- * Usage:
- * ```tsx
- * const { open, close, isOpen } = useModalStore()
- *
- * // Open a modal
- * open('confirmDelete')
- *
- * // Check if modal is open
- * if (isOpen('confirmDelete')) { ... }
- *
- * // Close a modal
- * close('confirmDelete')
- * ```
+ * The legacy Zustand contract (`useModalStore()` / `useModal(id)`) is kept
+ * — `useModalStore()` returns a plain object of accessors + setters.
  */
 
-import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
+import { createMemo } from 'solid-js'
+import { createStore } from 'solid-js/store'
 
 export type ModalId = string
 
-interface ModalState {
+interface ModalEntry {
   isOpen: boolean
   data?: unknown
 }
 
-interface ModalStore {
-  modals: Map<ModalId, ModalState>
-
-  // Actions
-  open: (id: ModalId, data?: unknown) => void
-  close: (id: ModalId) => void
-  closeAll: () => void
-  isOpen: (id: ModalId) => boolean
-  getData: <T = unknown>(id: ModalId) => T | undefined
-  setData: (id: ModalId, data: unknown) => void
+interface ModalState {
+  modals: Record<ModalId, ModalEntry>
 }
 
-export const useModalStore = create<ModalStore>()(
-  devtools(
-    (set, get) => ({
-      modals: new Map(),
+const [state, setState] = createStore<ModalState>({ modals: {} })
 
-      open: (id, data) => {
-        set(
-          state => {
-            const newModals = new Map(state.modals)
-            newModals.set(id, { isOpen: true, data })
-            return { modals: newModals }
-          },
-          false,
-          `modal/${id}/open`
-        )
-      },
+function open(id: ModalId, data?: unknown) {
+  setState('modals', id, { isOpen: true, data })
+}
 
-      close: id => {
-        set(
-          state => {
-            const newModals = new Map(state.modals)
-            newModals.set(id, { isOpen: false, data: undefined })
-            return { modals: newModals }
-          },
-          false,
-          `modal/${id}/close`
-        )
-      },
+function close(id: ModalId) {
+  setState('modals', id, { isOpen: false, data: undefined })
+}
 
-      closeAll: () => {
-        set(
-          state => {
-            const newModals = new Map(state.modals)
-            newModals.forEach((_, key) => {
-              newModals.set(key, { isOpen: false, data: undefined })
-            })
-            return { modals: newModals }
-          },
-          false,
-          'modal/closeAll'
-        )
-      },
-
-      isOpen: id => {
-        return get().modals.get(id)?.isOpen ?? false
-      },
-
-      getData: <T>(id: ModalId): T | undefined => {
-        return get().modals.get(id)?.data as T | undefined
-      },
-
-      setData: (id, data) => {
-        set(
-          state => {
-            const newModals = new Map(state.modals)
-            const current = newModals.get(id)
-            if (current) {
-              newModals.set(id, { ...current, data })
-            }
-            return { modals: newModals }
-          },
-          false,
-          `modal/${id}/setData`
-        )
-      },
-    }),
-    { name: 'ModalStore' }
-  )
-)
-
-/**
- * Hook for managing a specific modal
- *
- * @param id - Unique identifier for the modal
- * @returns Modal control functions
- *
- * @example
- * ```tsx
- * function DeleteConfirmModal() {
- *   const { isOpen, close, data } = useModal<{ itemId: string }>('deleteConfirm')
- *
- *   if (!isOpen) return null
- *
- *   return (
- *     <Dialog open={isOpen} onOpenChange={close}>
- *       <DialogContent>
- *         <p>Delete item {data?.itemId}?</p>
- *         <Button onClick={close}>Cancel</Button>
- *       </DialogContent>
- *     </Dialog>
- *   )
- * }
- *
- * // Open the modal from anywhere
- * function ItemList() {
- *   const { open } = useModal('deleteConfirm')
- *
- *   return (
- *     <button onClick={() => open({ itemId: '123' })}>
- *       Delete
- *     </button>
- *   )
- * }
- * ```
- */
-export function useModal<T = unknown>(id: ModalId) {
-  const store = useModalStore()
-
-  return {
-    isOpen: store.isOpen(id),
-    open: (data?: T) => store.open(id, data),
-    close: () => store.close(id),
-    data: store.getData<T>(id),
-    setData: (data: T) => store.setData(id, data),
+function closeAll() {
+  for (const key of Object.keys(state.modals)) {
+    setState('modals', key, { isOpen: false, data: undefined })
   }
 }
 
-/**
- * Common modal IDs
- * Define your application's modal IDs here for type safety
- */
+function isOpen(id: ModalId): boolean {
+  return state.modals[id]?.isOpen ?? false
+}
+
+function getData<T = unknown>(id: ModalId): T | undefined {
+  return state.modals[id]?.data as T | undefined
+}
+
+function setData(id: ModalId, data: unknown) {
+  const current = state.modals[id]
+  if (current) setState('modals', id, { ...current, data })
+}
+
+export function useModalStore() {
+  return { open, close, closeAll, isOpen, getData, setData, state }
+}
+
+export function useModal<T = unknown>(id: ModalId) {
+  const isOpenAccessor = createMemo(() => isOpen(id))
+  const dataAccessor = createMemo(() => getData<T>(id))
+  return {
+    get isOpen() {
+      return isOpenAccessor()
+    },
+    get data() {
+      return dataAccessor()
+    },
+    open: (data?: T) => open(id, data),
+    close: () => close(id),
+    setData: (data: T) => setData(id, data),
+  }
+}
+
 export const MODAL_IDS = {
   CONFIRM_DELETE: 'confirmDelete',
   CONFIRM_ACTION: 'confirmAction',

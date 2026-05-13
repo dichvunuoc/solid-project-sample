@@ -1,35 +1,38 @@
-import * as React from 'react'
-import * as RadioGroupPrimitive from '@radix-ui/react-radio-group'
-import { Circle } from 'lucide-react'
+import { RadioGroup as KRadioGroup } from '@kobalte/core/radio-group'
+import { Circle } from 'lucide-solid'
+import { splitProps, type ComponentProps, type JSX } from 'solid-js'
 import { cn } from '@/shared/lib/utils'
 
-const RadioGroup = React.forwardRef<
-  React.ElementRef<typeof RadioGroupPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>
->(({ className, ...props }, ref) => {
-  return <RadioGroupPrimitive.Root className={cn('grid gap-2', className)} {...props} ref={ref} />
-})
-RadioGroup.displayName = RadioGroupPrimitive.Root.displayName
+interface RadioGroupProps extends ComponentProps<typeof KRadioGroup> {
+  class?: string
+  children?: JSX.Element
+}
 
-const RadioGroupItem = React.forwardRef<
-  React.ElementRef<typeof RadioGroupPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
->(({ className, ...props }, ref) => {
+const RadioGroup = (props: RadioGroupProps) => {
+  const [local, rest] = splitProps(props, ['class', 'children'])
   return (
-    <RadioGroupPrimitive.Item
-      ref={ref}
-      className={cn(
-        'aspect-square h-4 w-4 rounded-full border border-primary text-primary ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-        className
-      )}
-      {...props}
-    >
-      <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-        <Circle className="h-2.5 w-2.5 fill-current text-current" />
-      </RadioGroupPrimitive.Indicator>
-    </RadioGroupPrimitive.Item>
+    <KRadioGroup class={cn('grid gap-2', local.class)} {...rest}>
+      {local.children}
+    </KRadioGroup>
   )
-})
-RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName
+}
+
+interface RadioGroupItemProps extends ComponentProps<typeof KRadioGroup.Item> {
+  class?: string
+}
+
+const RadioGroupItem = (props: RadioGroupItemProps) => {
+  const [local, rest] = splitProps(props, ['class'])
+  return (
+    <KRadioGroup.Item class={cn('inline-flex items-center', local.class)} {...rest}>
+      <KRadioGroup.ItemInput class="sr-only" />
+      <KRadioGroup.ItemControl class="aspect-square h-4 w-4 rounded-full border border-primary text-primary ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+        <KRadioGroup.ItemIndicator class="flex items-center justify-center">
+          <Circle class="h-2.5 w-2.5 fill-current text-current" />
+        </KRadioGroup.ItemIndicator>
+      </KRadioGroup.ItemControl>
+    </KRadioGroup.Item>
+  )
+}
 
 export { RadioGroup, RadioGroupItem }

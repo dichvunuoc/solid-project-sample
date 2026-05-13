@@ -1,25 +1,24 @@
-'use client'
-
-import * as React from 'react'
-import * as SeparatorPrimitive from '@radix-ui/react-separator'
+import { Separator as KSeparator, type SeparatorRootProps } from '@kobalte/core/separator'
+import { splitProps, type ValidComponent } from 'solid-js'
 import { cn } from '@/shared/lib/utils'
 
-const Separator = React.forwardRef<
-  React.ElementRef<typeof SeparatorPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root>
->(({ className, orientation = 'horizontal', decorative = true, ...props }, ref) => (
-  <SeparatorPrimitive.Root
-    ref={ref}
-    decorative={decorative}
-    orientation={orientation}
-    className={cn(
-      'shrink-0 bg-border',
-      orientation === 'horizontal' ? 'h-[1px] w-full' : 'h-full w-[1px]',
-      className
-    )}
-    {...props}
-  />
-))
-Separator.displayName = SeparatorPrimitive.Root.displayName
+type SolidSeparatorProps<T extends ValidComponent = 'hr'> = SeparatorRootProps<T> & {
+  class?: string
+}
 
-export { Separator }
+export function Separator<T extends ValidComponent = 'hr'>(props: SolidSeparatorProps<T>) {
+  const [local, rest] = splitProps(props as SolidSeparatorProps, ['class', 'orientation'])
+  return (
+    <KSeparator
+      orientation={local.orientation ?? 'horizontal'}
+      class={cn(
+        'shrink-0 bg-border',
+        (local.orientation ?? 'horizontal') === 'horizontal'
+          ? 'h-[1px] w-full'
+          : 'h-full w-[1px]',
+        local.class
+      )}
+      {...rest}
+    />
+  )
+}

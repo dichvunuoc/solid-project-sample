@@ -1,16 +1,13 @@
 /**
- * Sign Up Form Feature
- *
- * FSD Rule: Feature UI component for user registration with form validation.
+ * Sign-Up form (Solid + @modular-forms/solid).
  */
 
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { createForm, zodForm } from '@modular-forms/solid'
 import { z } from 'zod'
 import { authClient } from '@/shared/lib/client-auth'
 import { toast } from '@/shared/lib/toast'
-import { TextField } from '@/shared/ui/forms'
 import { Button } from '@/shared/ui/shadcn/button'
+import { TextField } from '@/shared/ui/forms'
 
 const signUpSchema = z
   .object({
@@ -31,72 +28,89 @@ interface SignUpFormProps {
   onError?: (error: Error) => void
 }
 
-export function SignUpForm({ onSuccess, onError }: SignUpFormProps) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
+export function SignUpForm(props: SignUpFormProps) {
+  const [form, { Form, Field }] = createForm<SignUpFormData>({
+    validate: zodForm(signUpSchema),
   })
 
-  const onSubmit = async (data: SignUpFormData) => {
-    try {
-      await authClient.signUp.email({
-        email: data.email,
-        password: data.password,
-        name: data.name,
-      })
-      toast.success('Account created successfully', 'Welcome!')
-      onSuccess?.()
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Registration failed')
-      toast.error('Registration failed', error.message)
-      onError?.(error)
-    }
-  }
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <TextField
-        id="name"
-        type="text"
-        label="Name"
-        placeholder="Your name"
-        {...register('name')}
-        error={errors.name?.message}
-        required
-      />
-      <TextField
-        id="email"
-        type="email"
-        label="Email address"
-        placeholder="Email address"
-        {...register('email')}
-        error={errors.email?.message}
-        required
-      />
-      <TextField
-        id="password"
-        type="password"
-        label="Password"
-        placeholder="Password (min. 8 characters)"
-        {...register('password')}
-        error={errors.password?.message}
-        required
-      />
-      <TextField
-        id="confirmPassword"
-        type="password"
-        label="Confirm Password"
-        placeholder="Confirm password"
-        {...register('confirmPassword')}
-        error={errors.confirmPassword?.message}
-        required
-      />
-      <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? 'Creating account...' : 'Sign up'}
+    <Form
+      class="space-y-4"
+      onSubmit={async values => {
+        try {
+          await authClient.signUp.email({
+            email: values.email,
+            password: values.password,
+            name: values.name,
+          })
+          toast.success('Account created successfully', 'Welcome!')
+          props.onSuccess?.()
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error('Registration failed')
+          toast.error('Registration failed', error.message)
+          props.onError?.(error)
+        }
+      }}
+    >
+      <Field name="name">
+        {(field, fieldProps) => (
+          <TextField
+            {...fieldProps}
+            id="name"
+            type="text"
+            label="Name"
+            placeholder="Your name"
+            value={field.value ?? ''}
+            error={field.error}
+            required
+          />
+        )}
+      </Field>
+      <Field name="email">
+        {(field, fieldProps) => (
+          <TextField
+            {...fieldProps}
+            id="email"
+            type="email"
+            label="Email address"
+            placeholder="Email address"
+            value={field.value ?? ''}
+            error={field.error}
+            required
+          />
+        )}
+      </Field>
+      <Field name="password">
+        {(field, fieldProps) => (
+          <TextField
+            {...fieldProps}
+            id="password"
+            type="password"
+            label="Password"
+            placeholder="Password (min. 8 characters)"
+            value={field.value ?? ''}
+            error={field.error}
+            required
+          />
+        )}
+      </Field>
+      <Field name="confirmPassword">
+        {(field, fieldProps) => (
+          <TextField
+            {...fieldProps}
+            id="confirmPassword"
+            type="password"
+            label="Confirm Password"
+            placeholder="Confirm password"
+            value={field.value ?? ''}
+            error={field.error}
+            required
+          />
+        )}
+      </Field>
+      <Button type="submit" disabled={form.submitting} class="w-full">
+        {form.submitting ? 'Creating account...' : 'Sign up'}
       </Button>
-    </form>
+    </Form>
   )
 }

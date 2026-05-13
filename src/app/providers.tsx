@@ -1,4 +1,8 @@
-import { useEffect, type ReactNode } from 'react'
+/**
+ * Root composition of providers. Solid edition.
+ */
+
+import { onMount, type JSX } from 'solid-js'
 import { SessionProvider } from '@/entities/session/ui/session-provider'
 import { initMonitoring } from '@/shared/lib/monitoring'
 import { initWebVitals } from '@/shared/lib/web-vitals'
@@ -7,15 +11,11 @@ import { ToastProvider } from '@/shared/ui/toast-provider'
 import { EventRegistry } from './providers/event-registry'
 import { QueryProvider } from './providers/query-provider'
 
-export function Providers({ children }: { children: ReactNode }) {
-  // Initialize monitoring and performance tracking on app start
-  useEffect(() => {
-    // Initialize error monitoring (Sentry)
-    initMonitoring()
-
-    // Initialize Web Vitals performance tracking
+export function Providers(props: { children: JSX.Element }) {
+  onMount(() => {
+    void initMonitoring()
     initWebVitals()
-  }, [])
+  })
 
   return (
     <ErrorBoundary>
@@ -23,7 +23,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <SessionProvider>
           <ToastProvider>
             <EventRegistry />
-            {children}
+            {props.children}
           </ToastProvider>
         </SessionProvider>
       </QueryProvider>

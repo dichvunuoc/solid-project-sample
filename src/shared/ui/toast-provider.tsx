@@ -1,21 +1,14 @@
 /**
- * Toast Provider Component
- *
- * Wraps the app with Sonner's Toaster component.
- * FSD Rule: This is in the Shared layer, accessible to all layers.
+ * Toast Provider (Solid).
  */
 
-import type { ReactNode } from 'react'
-import { Toaster } from 'sonner'
+import { Toaster } from 'solid-sonner'
+import type { JSX } from 'solid-js'
 
-interface ToastProviderProps {
-  children: ReactNode
-}
-
-export function ToastProvider({ children }: ToastProviderProps) {
+export function ToastProvider(props: { children: JSX.Element }) {
   return (
     <>
-      {children}
+      {props.children}
       <Toaster position="top-right" richColors />
     </>
   )
