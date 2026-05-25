@@ -38,5 +38,15 @@ yarn-error.log*
 
 # TanStack Router — route tree is committed; refresh with `npm run routes:generate` (also runs before typecheck / vitest run).
 
+# Playwright
+test-results/
+playwright-report/
+
+# TanStack
+.tanstack/
+
+# Codegraph
+.codegraph/codegraph.db
+
 # Stray tooling artifacts
 app.config.timestamp*.js
