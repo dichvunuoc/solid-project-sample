@@ -225,3 +225,39 @@ export async function startTransaction(name: string, op: string = 'custom'): Pro
     setTag: () => {},
   }
 }
+
+// ---------------------------------------------------------------------------
+// Audit Logging
+// ---------------------------------------------------------------------------
+
+export type AuditEventType =
+  | 'auth.login'
+  | 'auth.logout'
+  | 'auth.token_refresh'
+  | 'auth.session_expired'
+  | 'auth.permission_denied'
+  | 'auth.role_check'
+
+export interface AuditEvent {
+  type: AuditEventType
+  userId?: string
+  detail?: string
+  metadata?: Record<string, unknown>
+  timestamp: number
+}
+
+export async function logAuditEvent(
+  type: AuditEventType,
+  detail?: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  logger.info(`[AUDIT] ${type}${detail ? `: ${detail}` : ''}`, metadata)
+
+  if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_ENABLED === 'true') {
+    await captureMessage(`[AUDIT] ${type}`, 'info', {
+      action: type,
+      detail,
+      ...metadata,
+    })
+  }
+}

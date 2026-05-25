@@ -3,6 +3,7 @@
  */
 
 import { onMount, type JSX } from 'solid-js'
+import { AuthInitializer } from '@/entities/session/ui/auth-initializer'
 import { SessionProvider } from '@/entities/session/ui/session-provider'
 import { initMonitoring } from '@/shared/lib/monitoring'
 import { initWebVitals } from '@/shared/lib/web-vitals'
@@ -20,12 +21,14 @@ export function Providers(props: { children: JSX.Element }) {
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <SessionProvider>
-          <ToastProvider>
-            <EventRegistry />
-            {props.children}
-          </ToastProvider>
-        </SessionProvider>
+        <AuthInitializer>
+          <SessionProvider>
+            <ToastProvider>
+              <EventRegistry />
+              {props.children}
+            </ToastProvider>
+          </SessionProvider>
+        </AuthInitializer>
       </QueryProvider>
     </ErrorBoundary>
   )

@@ -29,6 +29,8 @@ import type { AuthSessionData } from '@/shared/lib/client-auth'
 import { authClient } from '@/shared/lib/client-auth'
 import { attachKeycloakSessionSync } from '@/shared/lib/keycloak-auth'
 import { clearUser, setUser } from '@/shared/lib/monitoring'
+import { createIdleTimeout } from '@/shared/lib/session-timeout'
+import { broadcastAuthEvent, onAuthBroadcast } from '@/shared/lib/auth-broadcast'
 
 interface SessionStoreShape {
   session: AuthSessionData | null
@@ -87,6 +89,11 @@ export function SessionProvider(props: { children: JSX.Element }) {
         const data = await authClient.getSession()
         if (cancelled) return
         applySession(data)
+
+        // Start idle timeout when user is authenticated
+        if (data?.user) {
+          createIdleTimeout(() => void logout())
+        }
       } catch (err) {
         if (cancelled) return
         setState('error', err instanceof Error ? err : new Error('Failed to load session'))
@@ -107,6 +114,18 @@ export function SessionProvider(props: { children: JSX.Element }) {
     onCleanup(() => {
       cancelled = true
       window.removeEventListener('storage', onStorage)
+      unsubBroadcast()
+    })
+
+    // Cross-tab session sync via BroadcastChannel
+    const unsubBroadcast = onAuthBroadcast(type => {
+      if (type === 'session_invalidated') {
+        setState({ session: null, error: null })
+        queryClient.clear()
+        void clearUser()
+      } else if (type === 'session_refreshed') {
+        void refreshSession()
+      }
     })
   })
 
@@ -146,6 +165,7 @@ export function SessionProvider(props: { children: JSX.Element }) {
     setState({ session: null, error: null })
     queryClient.clear()
     void clearUser()
+    broadcastAuthEvent('session_invalidated')
   }
 
   const value: SessionContextValue = {

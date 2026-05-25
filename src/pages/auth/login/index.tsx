@@ -21,7 +21,7 @@ export function LoginPage() {
 
   const afterLoginPath = () => {
     const r = (search() as { redirect?: string }).redirect
-    return r && r.startsWith('/') ? r : '/dashboard'
+    return r && r.startsWith('/') ? r : '/'
   }
 
   const handleSsoLogin = async () => {

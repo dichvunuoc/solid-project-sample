@@ -182,7 +182,6 @@ const routeAccessControl: RouteAccess[] = [
   { path: '/register', roles: Object.values(ROLES), requireAuth: false },
 
   // Protected routes
-  { path: '/dashboard', roles: [ROLES.USER, ROLES.MODERATOR, ROLES.ADMIN], requireAuth: true },
   { path: '/profile', roles: [ROLES.USER, ROLES.MODERATOR, ROLES.ADMIN], requireAuth: true },
 
   // Admin routes

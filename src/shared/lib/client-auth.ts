@@ -7,6 +7,7 @@
  */
 
 import { env } from '@/shared/config/env'
+import { backendSessionAuth } from './backend-session-auth'
 import { keycloakAuth } from './keycloak-auth'
 import { isMockAuthActive, mockAuth } from './mock-auth'
 
@@ -55,9 +56,6 @@ export interface AuthClient {
   hasPermission: (permission: string) => Promise<boolean>
 }
 
-const notWiredMessage =
-  'Auth is not wired to your backend. Set VITE_AUTH_MODE=mock for local dev, VITE_AUTH_MODE=keycloak for SSO, or implement the backend-session adapter.'
-
 const mockAuthClient: AuthClient = {
   signUp: {
     email: mockAuth.signUp.email,
@@ -78,29 +76,6 @@ const mockAuthClient: AuthClient = {
   hasPermission: async () => false,
 }
 
-const backendAuthPlaceholder: AuthClient = {
-  signUp: {
-    email: async () => {
-      throw new Error(notWiredMessage)
-    },
-  },
-  signIn: {
-    email: async () => {
-      throw new Error(notWiredMessage)
-    },
-  },
-  signOut: async () => {},
-  getSession: async () => null,
-  getAccessToken: async () => null,
-  login: async () => {
-    throw new Error(notWiredMessage)
-  },
-  logout: async () => {},
-  updateToken: async () => false,
-  hasRole: async () => false,
-  hasPermission: async () => false,
-}
-
 function resolveAuthClient(): AuthClient {
   if (env.VITE_AUTH_MODE === 'keycloak') {
     return keycloakAuth
@@ -110,7 +85,7 @@ function resolveAuthClient(): AuthClient {
     return mockAuthClient
   }
 
-  return backendAuthPlaceholder
+  return backendSessionAuth
 }
 
 export const authClient = resolveAuthClient()

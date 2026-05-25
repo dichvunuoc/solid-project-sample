@@ -20,6 +20,8 @@ const envSchema = z.object({
   VITE_KEYCLOAK_CLIENT_ID: z.string().optional().default(''),
   VITE_KEYCLOAK_ON_LOAD: z.enum(['check-sso', 'login-required']).optional().default('check-sso'),
   VITE_KEYCLOAK_SILENT_CHECK_SSO_REDIRECT_URI: z.string().optional().default(''),
+  // Multi-tenant support: optional tenant slug resolved at runtime
+  VITE_KEYCLOAK_TENANT_REALM: z.string().optional().default(''),
 
   // Sentry configuration
   VITE_SENTRY_DSN: z.string().optional().default(''),
@@ -61,6 +63,7 @@ function getEnv(): Env {
       VITE_KEYCLOAK_ON_LOAD: import.meta.env.VITE_KEYCLOAK_ON_LOAD || 'check-sso',
       VITE_KEYCLOAK_SILENT_CHECK_SSO_REDIRECT_URI:
         import.meta.env.VITE_KEYCLOAK_SILENT_CHECK_SSO_REDIRECT_URI || '',
+      VITE_KEYCLOAK_TENANT_REALM: import.meta.env.VITE_KEYCLOAK_TENANT_REALM || '',
 
       // Sentry
       VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN || '',

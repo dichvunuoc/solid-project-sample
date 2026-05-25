@@ -9,7 +9,7 @@ export default defineConfig({
       target: 'solid',
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
-      autoCodeSplitting: false,
+      autoCodeSplitting: true,
     }),
     solid(),
   ],
@@ -28,6 +28,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      thresholds: {
+        statements: 50,
+        branches: 40,
+        functions: 40,
+        lines: 50,
+      },
       exclude: [
         'node_modules/',
         'src/test/',
@@ -35,6 +41,7 @@ export default defineConfig({
         '**/*.config.*',
         '**/mockData',
         '**/routeTree.gen.ts',
+        '**/index.ts',
       ],
     },
   },

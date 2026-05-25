@@ -1,4 +1,5 @@
 import { env } from '@/shared/config/env'
+import { clearTokenCache } from './auth-token'
 import type { AuthClient, AuthSessionData } from './client-auth'
 import type Keycloak from 'keycloak-js'
 
@@ -46,9 +47,11 @@ async function getKeycloak(): Promise<Keycloak> {
 
   if (!keycloak) {
     const { default: KeycloakConstructor } = await import('keycloak-js')
+    // Multi-tenant: use tenant realm if provided, otherwise default realm
+    const realm = env.VITE_KEYCLOAK_TENANT_REALM || env.VITE_KEYCLOAK_REALM
     keycloak = new KeycloakConstructor({
       url: env.VITE_KEYCLOAK_URL,
-      realm: env.VITE_KEYCLOAK_REALM,
+      realm,
       clientId: env.VITE_KEYCLOAK_CLIENT_ID,
     })
   }
@@ -83,14 +86,17 @@ export function attachKeycloakSessionSync(onInvalidate: () => void): void {
   void getKeycloak()
     .then(kc => {
       kc.onTokenExpired = () => {
+        clearTokenCache()
         void kc.updateToken(30).finally(() => {
           onInvalidate()
         })
       }
       kc.onAuthLogout = () => {
+        clearTokenCache()
         onInvalidate()
       }
       kc.onAuthSuccess = () => {
+        clearTokenCache()
         onInvalidate()
       }
     })
@@ -171,6 +177,7 @@ export const keycloakAuth: AuthClient = {
     },
   },
   signOut: async () => {
+    clearTokenCache()
     const kc = await getKeycloak()
     await kc.logout({ redirectUri: window.location.origin })
   },
@@ -191,6 +198,7 @@ export const keycloakAuth: AuthClient = {
     await kc.login({ redirectUri: redirectUri ?? window.location.href })
   },
   logout: async redirectUri => {
+    clearTokenCache()
     const kc = await getKeycloak()
     await kc.logout({ redirectUri: redirectUri ?? window.location.origin })
   },

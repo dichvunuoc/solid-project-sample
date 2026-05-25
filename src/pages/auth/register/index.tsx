@@ -19,7 +19,7 @@ export function RegisterPage() {
     await refreshSession()
     setIsSuccess(true)
     setTimeout(() => {
-      void navigate({ to: '/dashboard' })
+      void navigate({ to: '/' })
     }, 2000)
   }
 
