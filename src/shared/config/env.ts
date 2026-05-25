@@ -23,6 +23,9 @@ const envSchema = z.object({
   // Multi-tenant support: optional tenant slug resolved at runtime
   VITE_KEYCLOAK_TENANT_REALM: z.string().optional().default(''),
 
+  // Cross-app SSO: Menu App URL for navigation between shell and mini-apps
+  VITE_MENU_APP_URL: z.string().optional().default(''),
+
   // Sentry configuration
   VITE_SENTRY_DSN: z.string().optional().default(''),
   VITE_SENTRY_ENVIRONMENT: z.string().optional().default('development'),
@@ -64,6 +67,9 @@ function getEnv(): Env {
       VITE_KEYCLOAK_SILENT_CHECK_SSO_REDIRECT_URI:
         import.meta.env.VITE_KEYCLOAK_SILENT_CHECK_SSO_REDIRECT_URI || '',
       VITE_KEYCLOAK_TENANT_REALM: import.meta.env.VITE_KEYCLOAK_TENANT_REALM || '',
+
+      // Cross-app SSO
+      VITE_MENU_APP_URL: import.meta.env.VITE_MENU_APP_URL || '',
 
       // Sentry
       VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN || '',
