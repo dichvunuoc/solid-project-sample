@@ -80,23 +80,16 @@ export async function likePost(params: LikePostParams) {
 
 ```tsx
 // src/features/process-rewards/api/use-reward-chain.ts
-import { useEffect } from 'react'
-import { eventBus } from '@/shared/api/events/bus'
-import type { ApplicationEvents } from '@/shared/api/events/registry'
+import { useEventListener } from '@/shared/lib/events/use-event-listener'
+import type { ApplicationEvents } from '@/shared/lib/events/registry'
 
 export function useRewardChain() {
-  useEffect(() => {
-    const handlePostLiked = (payload: ApplicationEvents['post:liked']) => {
-      // Process the event
-      console.log('Post liked:', payload)
-    }
+  const handlePostLiked = (payload: ApplicationEvents['post:liked']) => {
+    // Process the event
+    console.log('Post liked:', payload)
+  }
 
-    eventBus.on('post:liked', handlePostLiked)
-
-    return () => {
-      eventBus.off('post:liked', handlePostLiked)
-    }
-  }, [])
+  useEventListener('post:liked', handlePostLiked)
 }
 ```
 

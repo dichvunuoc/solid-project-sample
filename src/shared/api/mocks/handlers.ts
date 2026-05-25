@@ -2,12 +2,11 @@
  * MSW (Mock Service Worker) Request Handlers
  *
  * Define mock API responses for testing and development.
- * Add your domain-specific handlers here.
+ * Paths are matched relative to VITE_API_URL (use wildcard host prefix).
  */
 
 import { http, HttpResponse } from 'msw'
 
-// Mock user session
 const mockSession = {
   user: {
     id: '1',
@@ -22,31 +21,45 @@ const mockSession = {
   },
 }
 
-/**
- * API Request Handlers
- *
- * Define handlers for different API endpoints.
- * Use http.get, http.post, http.put, http.delete, etc.
- */
+const mockSampleItems = {
+  items: [
+    {
+      id: 'item-1',
+      title: 'Onboard service A',
+      status: 'active' as const,
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'item-2',
+      title: 'Wire Keycloak client',
+      status: 'draft' as const,
+      updatedAt: new Date(Date.now() - 86400000).toISOString(),
+    },
+  ],
+  total: 2,
+}
+
 export const handlers = [
-  // Session endpoints
-  http.get('/api/session', () => {
-    return HttpResponse.json(mockSession)
-  }),
+  http.get('*/sample-items', () => HttpResponse.json(mockSampleItems)),
 
-  http.post('/api/auth/sign-in', async ({ request }) => {
+  http.get('*/api/session', () => HttpResponse.json(mockSession)),
+
+  http.get('*/auth/session', () =>
+    HttpResponse.json({
+      user: mockSession.user,
+      session: { token: 'session-cookie' },
+    })
+  ),
+
+  http.get('*/auth/csrf', () => HttpResponse.json({ csrfToken: 'mock-csrf-token' })),
+
+  http.post('*/api/auth/sign-in', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string }
-
     if (body.email && body.password) {
       return HttpResponse.json(mockSession)
     }
-
     return HttpResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }),
 
-  http.post('/api/auth/sign-out', () => {
-    return HttpResponse.json({ success: true })
-  }),
-
-  // Add your domain handlers below:
+  http.post('*/api/auth/sign-out', () => HttpResponse.json({ success: true })),
 ]

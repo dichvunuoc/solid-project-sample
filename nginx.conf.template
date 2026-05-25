@@ -11,9 +11,8 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
-    # CSP — allow inline styles for Tailwind, connect to API and IAM
-    # Adjust connect-src to include your Keycloak domain in production
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:* https://iam.example.com; frame-src http://localhost:* https://iam.example.com;" always;
+    # CSP — allow inline styles for Tailwind, connect to API and IAM dynamically
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:* ${VITE_KEYCLOAK_URL} ${VITE_API_URL}; frame-src http://localhost:* ${VITE_KEYCLOAK_URL};" always;
 
     # HSTS — enforce HTTPS (enable when serving over TLS)
     # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;

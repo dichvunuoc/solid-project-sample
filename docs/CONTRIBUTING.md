@@ -168,22 +168,24 @@ export function getUserName(user: any) {
 }
 ```
 
-### React Components
+### SolidJS Components
 
 ✅ **Do:**
 
-- Use functional components with hooks
-- Extract complex logic into custom hooks
-- Use `React.FC` or explicit return types
-- Keep components focused and small (< 200 lines)
-- Use named exports
+- Keep components reactive by accessing props directly as `props.something` or using `splitProps` / `mergeProps` from `solid-js`.
+- Extract complex reactive state into custom hooks, signals, or stores.
+- Use explicit return type `JSX.Element` for components.
+- Keep components focused and small (< 200 lines).
+- Use named exports.
+- Use the `class` attribute for styling instead of `className`.
 
 ❌ **Don't:**
 
-- Use class components (unless necessary for error boundaries)
-- Put business logic directly in components
-- Use default exports (for consistency)
-- Mix UI and business logic
+- **NEVER destructure props** in component function parameters or body (e.g., `const { label } = props`). This is a severe anti-pattern in SolidJS as it destroys the reactivity of the properties.
+- Put heavy business logic directly in presentational components.
+- Use default exports (for consistency).
+- Mix UI and heavy backend business logic.
+- Use `className` (SolidJS uses `class`).
 
 **Example:**
 
@@ -195,19 +197,25 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary'
 }
 
-export function Button({ label, onClick, variant = 'primary' }: ButtonProps) {
+export function Button(props: ButtonProps) {
   return (
-    <button className={cn('btn', `btn-${variant}`)} onClick={onClick}>
-      {label}
+    <button class={cn('btn', `btn-${props.variant ?? 'primary'}`)} onClick={() => props.onClick()}>
+      {props.label}
     </button>
   )
 }
 
-// ❌ Bad
-export default ({ label, onClick }: any) => (
-  <button onClick={onClick}>{label}</button>
-)
+// ❌ Bad — Destructuring destroys reactivity in SolidJS!
+export function DestructuredButton({ label, onClick, variant = 'primary' }: ButtonProps) {
+  return (
+    <button class={cn('btn', `btn-${variant}`)} onClick={onClick}>
+      {label}
+    </button>
+  )
+}
 ```
+
+````
 
 ### Styling (Tailwind CSS)
 
@@ -237,13 +245,13 @@ export default ({ label, onClick }: any) => (
 
 // ❌ Bad
 <div style={{ display: 'flex', padding: '16px' }}>
-```
+````
 
 ### Import Order
 
 Imports are automatically sorted by ESLint. The order is:
 
-1. React imports
+1. `solid-js` imports
 2. External packages
 3. Internal layers (app → pages → widgets → features → entities → shared)
 4. Relative imports
@@ -252,8 +260,8 @@ Imports are automatically sorted by ESLint. The order is:
 **Example:**
 
 ```typescript
-import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { createSignal, onMount } from 'solid-js'
+import { useQuery } from '@tanstack/solid-query'
 import { Button } from '@/shared/ui'
 import { useSession } from '@/entities/session'
 import type { User } from './types'
@@ -265,7 +273,7 @@ import type { User } from './types'
 
 ### Feature-Sliced Design (FSD)
 
-Our project follows FSD architecture. **Please read `PROJECT_STRUCTURE.md`** for detailed guidelines.
+Our project follows FSD architecture. **Please read [`ARCHITECTURE_RULES.md`](./ARCHITECTURE_RULES.md)** for detailed guidelines.
 
 #### Key Rules:
 
@@ -346,7 +354,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/) specifica
 ```bash
 feat(auth): add password reset functionality
 
-fix(dashboard): resolve infinite loop in useEffect
+fix(dashboard): resolve infinite loop in createEffect
 
 docs(readme): update installation instructions
 
@@ -354,7 +362,7 @@ refactor(api): extract HTTP client interceptors
 
 test(auth): add sign-in form validation tests
 
-chore(deps): upgrade React to 18.3.1
+chore(deps): upgrade SolidJS to 1.9.0
 ```
 
 ### Scope Guidelines:
@@ -447,22 +455,22 @@ Brief description of what this PR does.
 
 ```typescript
 // features/auth/sign-in/ui/sign-in-form.test.tsx
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent } from '@solidjs/testing-library'
 import { SignInForm } from './sign-in-form'
 
 describe('SignInForm', () => {
   it('should render email and password fields', () => {
-    render(<SignInForm />)
+    render(() => <SignInForm />)
 
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
   })
 
   it('should show validation error for invalid email', async () => {
-    render(<SignInForm />)
+    render(() => <SignInForm />)
 
     const emailInput = screen.getByLabelText(/email/i)
-    fireEvent.change(emailInput, { target: { value: 'invalid' } })
+    fireEvent.input(emailInput, { target: { value: 'invalid' } })
     fireEvent.blur(emailInput)
 
     expect(await screen.findByText(/valid email/i)).toBeInTheDocument()
@@ -485,43 +493,22 @@ describe('SignInForm', () => {
 Always use TanStack Query for API calls:
 
 ```typescript
-// ✅ Good
-export function useUserProfile(userId: string) {
-  return useQuery({
-    queryKey: queryKeys.user.detail(userId),
+// ✅ Good — queryOptions in entity API
+export const userQueryOptions = (userId: string) =>
+  queryOptions({
+    queryKey: queryKeys.users.detail(userId),
     queryFn: () => httpClient.get(`/users/${userId}`),
   })
-}
 
-// ❌ Bad - Don't use useEffect + useState for API calls
-const [data, setData] = useState()
-useEffect(() => {
-  fetch('/api/users').then(res => setData(res))
-}, [])
+// In UI:
+const query = useQuery(() => userQueryOptions(userId))
+
+// ❌ Bad — ad-hoc fetch in createEffect without Query
 ```
 
 ### Form Handling
 
-Use React Hook Form + Zod:
-
-```typescript
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-})
-
-export function LoginForm() {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(schema),
-  })
-
-  const onSubmit = (data) => {
-    // Submit form
-  }
-
-  return <form onSubmit={handleSubmit(onSubmit)}>...</form>
-}
-```
+Use `@modular-forms/solid` + Zod (see `src/features/auth/sign-in/ui/sign-in-form.tsx`).
 
 ### Error Handling
 
@@ -544,25 +531,23 @@ try {
 const event = new PaymentSuccessEvent({ orderId, amount })
 eventBus.emit(PAYMENT_SUCCESS, event)
 
-// Listen to event
-useEffect(() => {
+// Listen in Solid (onMount + onCleanup)
+onMount(() => {
   const handler = (event: PaymentSuccessEvent) => {
-    // Handle event
+    /* ... */
   }
-
   eventBus.on(PAYMENT_SUCCESS, handler)
-  return () => eventBus.off(PAYMENT_SUCCESS, handler)
-}, [])
+  onCleanup(() => eventBus.off(PAYMENT_SUCCESS, handler))
+})
 ```
 
 ---
 
 ## ❓ Questions?
 
-- **Architecture:** See `PROJECT_STRUCTURE.md`
-- **Event Bus:** See `EVENT_BUS_GUIDE.md`
-- **UI Components:** See `SHADCN_GUIDE.md`
-- **Quick Reference:** See `QUICK_REFERENCE_GUIDE.md`
+- **Architecture:** [`ARCHITECTURE_RULES.md`](./ARCHITECTURE_RULES.md)
+- **Event Bus:** [`EVENT_BUS_GUIDE.md`](./EVENT_BUS_GUIDE.md)
+- **Keycloak / SSO:** [`auth-keycloak.md`](./auth-keycloak.md), [`cross-app-sso.md`](./cross-app-sso.md)
 
 **Need help?** Ask in the team Slack/Discord channel or ping the boilerplate champion.
 

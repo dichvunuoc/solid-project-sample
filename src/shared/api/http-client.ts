@@ -3,8 +3,12 @@
  *
  * Centralized HTTP client with interceptors, error handling, and retry logic.
  * FSD Rule: This is in the Shared layer, accessible to all layers.
+ *
+ * - keycloak / mock: Bearer token via Authorization header
+ * - backend-session: cookie session (credentials: 'include'), no Bearer
  */
 
+import { isBackendSessionMode, usesBearerAuth } from '@/shared/config/auth-mode'
 import { env } from '@/shared/config/env'
 import { getAuthToken } from '@/shared/lib/auth-token'
 import { authClient } from '@/shared/lib/client-auth'
@@ -22,17 +26,22 @@ export interface RequestConfig extends RequestInit {
 }
 
 class HttpClient {
-  private baseURL: string
+  /** When undefined, resolves `env.VITE_API_URL` on each request (runtime config). */
+  private baseURLOverride: string | undefined
   private defaultHeaders: Record<string, string>
   private timeout: number
 
   constructor(config: HttpClientConfig = {}) {
-    this.baseURL = config.baseURL || ''
-    this.timeout = config.timeout || 30000
+    this.baseURLOverride = config.baseURL
+    this.timeout = config.timeout || env.VITE_API_TIMEOUT
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       ...config.headers,
     }
+  }
+
+  private fetchCredentials(): RequestCredentials {
+    return isBackendSessionMode() ? 'include' : 'same-origin'
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
@@ -43,14 +52,12 @@ class HttpClient {
         const errorData = await response.json()
         errorMessage = errorData.message || errorData.error || errorMessage
       } catch {
-        // If response is not JSON, use status text
         errorMessage = response.statusText || errorMessage
       }
 
       throw new Error(errorMessage)
     }
 
-    // Handle empty responses
     const contentType = response.headers.get('content-type')
     if (!contentType || !contentType.includes('application/json')) {
       return {} as T
@@ -59,10 +66,14 @@ class HttpClient {
     return response.json()
   }
 
+  private resolveBaseURL(): string {
+    return this.baseURLOverride ?? env.VITE_API_URL
+  }
+
   private async request<T>(url: string, config: RequestConfig = {}): Promise<T> {
     const { skipErrorToast = false, skipAuth = false, headers = {}, ...fetchConfig } = config
 
-    const fullUrl = url.startsWith('http') ? url : `${this.baseURL}${url}`
+    const fullUrl = url.startsWith('http') ? url : `${this.resolveBaseURL()}${url}`
 
     const send = async (): Promise<Response> => {
       const requestHeaders: HeadersInit = {
@@ -70,9 +81,9 @@ class HttpClient {
         ...(headers as Record<string, string>),
       }
 
-      if (!skipAuth) {
+      if (!skipAuth && usesBearerAuth()) {
         const token = await getAuthToken()
-        if (token) {
+        if (token && token !== 'session-cookie') {
           requestHeaders['Authorization'] = `Bearer ${token}`
         }
       }
@@ -84,6 +95,7 @@ class HttpClient {
         const response = await fetch(fullUrl, {
           ...fetchConfig,
           headers: requestHeaders,
+          credentials: this.fetchCredentials(),
           signal: controller.signal,
         })
         clearTimeout(timeoutId)
@@ -98,11 +110,17 @@ class HttpClient {
       let response = await send()
 
       if (response.status === 401 && !skipAuth) {
+        if (isBackendSessionMode()) {
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+          }
+          throw new Error('Session expired. Please sign in again.')
+        }
+
         const refreshed = await authClient.updateToken(30)
         if (refreshed) {
           response = await send()
         } else {
-          // Token refresh failed — redirect to login
           if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
             window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
           }
@@ -163,8 +181,22 @@ class HttpClient {
   }
 }
 
-// Create and export a singleton instance
+/** Default client — points at gateway or primary microservice (`VITE_API_URL`). */
 export const httpClient = new HttpClient({
   baseURL: env.VITE_API_URL,
-  timeout: 30000,
 })
+
+/**
+ * Factory for additional bounded-context clients (multi-microservice FE).
+ *
+ * @example
+ * export const catalogClient = createHttpClient({ baseURL: env.VITE_CATALOG_API_URL })
+ */
+export function createHttpClient(config: HttpClientConfig = {}): HttpClient {
+  return new HttpClient(config)
+}
+
+/** Optional secondary service client when `VITE_SECONDARY_API_URL` is set. */
+export const secondaryHttpClient = env.VITE_SECONDARY_API_URL
+  ? createHttpClient({ baseURL: env.VITE_SECONDARY_API_URL })
+  : null

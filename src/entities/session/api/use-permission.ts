@@ -1,13 +1,9 @@
 /**
- * Permission accessors for Solid.
- *
- * All return reactive accessors (call with `()` in JSX) so they re-evaluate
- * whenever the session store updates without forcing the component to re-run.
+ * Permission accessors for Solid (session entity).
  */
 
 import { createMemo, type Accessor } from 'solid-js'
-import { useSession } from '@/entities/session/api/use-session'
-import { deriveAppRoleFromSession } from '../auth-role'
+import { deriveAppRoleFromSession } from '@/shared/lib/auth-role'
 import {
   canAccessRoute,
   hasAnyPermission,
@@ -15,7 +11,8 @@ import {
   hasRoleLevel,
   type Permission,
   type Role,
-} from '../permissions'
+} from '@/shared/lib/permissions'
+import { useSession } from './use-session'
 
 function useTokenPermissionSet(): Accessor<Set<string>> {
   const session = useSession()
@@ -48,9 +45,7 @@ export function useAnyPermission(permissions: Permission[]): Accessor<boolean> {
 export function useAllPermissions(permissions: Permission[]): Accessor<boolean> {
   const tokenSet = useTokenPermissionSet()
   const role = useUserRole()
-  return createMemo(() =>
-    permissions.every(p => tokenSet().has(p) || hasPermission(role(), p))
-  )
+  return createMemo(() => permissions.every(p => tokenSet().has(p) || hasPermission(role(), p)))
 }
 
 export function useCanAccessRoute(path: string): Accessor<boolean> {

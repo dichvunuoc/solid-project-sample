@@ -59,11 +59,41 @@ async function getKeycloak(): Promise<Keycloak> {
   return keycloak
 }
 
+function extractRelayedToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const hash = window.location.hash
+    if (!hash) return null
+
+    // Parse hash parameters
+    const params = new URLSearchParams(hash.substring(1)) // Remove '#'
+    const token = params.get('access_token')
+
+    if (token) {
+      // Clean up the URL hash immediately for security
+      params.delete('access_token')
+      const newHash = params.toString()
+      window.history.replaceState(
+        {},
+        '',
+        window.location.pathname + window.location.search + (newHash ? `#${newHash}` : '')
+      )
+      return token
+    }
+  } catch {
+    // Ignore URL parsing errors
+  }
+  return null
+}
+
 async function initKeycloak(): Promise<boolean> {
   if (!initPromise) {
+    const relayedToken = extractRelayedToken()
+
     initPromise = getKeycloak().then(kc =>
       kc.init({
-        onLoad: env.VITE_KEYCLOAK_ON_LOAD,
+        token: relayedToken || undefined,
+        onLoad: relayedToken ? undefined : env.VITE_KEYCLOAK_ON_LOAD,
         pkceMethod: 'S256',
         checkLoginIframe: false,
         silentCheckSsoRedirectUri: env.VITE_KEYCLOAK_SILENT_CHECK_SSO_REDIRECT_URI || undefined,

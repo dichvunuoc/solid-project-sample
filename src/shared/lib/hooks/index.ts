@@ -18,12 +18,5 @@ export {
   usePrefersDarkMode,
 } from './use-media-query'
 export { useToast } from './use-toast'
-export {
-  usePermission,
-  useAnyPermission,
-  useAllPermissions,
-  useCanAccessRoute,
-  useHasRoleLevel,
-  useRole,
-  usePermissions,
-} from './use-permission'
+
+// Permission hooks live in @/entities/session (FSD: session-bound, not shared)

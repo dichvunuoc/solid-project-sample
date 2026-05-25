@@ -89,6 +89,7 @@ async function navigateWithTokenRelay(targetUrl: string, openInNewTab: boolean):
   const url = new URL(targetUrl)
   url.searchParams.set('sso_hint', 'keycloak')
   url.searchParams.set('kc_idp_hint', '') // Skip IDP selection if any
+  url.hash = `access_token=${encodeURIComponent(token)}`
 
   navigateTo(url.toString(), openInNewTab)
 }

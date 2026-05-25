@@ -21,14 +21,14 @@ export function Providers(props: { children: JSX.Element }) {
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <AuthInitializer>
-          <SessionProvider>
+        <SessionProvider>
+          <AuthInitializer>
             <ToastProvider>
               <EventRegistry />
               {props.children}
             </ToastProvider>
-          </SessionProvider>
-        </AuthInitializer>
+          </AuthInitializer>
+        </SessionProvider>
       </QueryProvider>
     </ErrorBoundary>
   )

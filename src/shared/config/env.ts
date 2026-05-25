@@ -41,6 +41,15 @@ const envSchema = z.object({
 
   // Development settings
   VITE_USE_MOCK_DATA: z.string().optional().default('false'),
+
+  // HTTP client
+  VITE_API_TIMEOUT: z.coerce.number().optional().default(30000),
+
+  // Optional secondary service base URL (multi-microservice pattern)
+  VITE_SECONDARY_API_URL: z.string().optional().default(''),
+
+  // Runtime config (public/config.json) — set false to skip fetch on boot
+  VITE_USE_RUNTIME_CONFIG: z.string().optional().default('true'),
 })
 
 type Env = z.infer<typeof envSchema>
@@ -87,6 +96,10 @@ function getEnv(): Env {
 
       // Development
       VITE_USE_MOCK_DATA: import.meta.env.VITE_USE_MOCK_DATA || 'false',
+
+      VITE_API_TIMEOUT: import.meta.env.VITE_API_TIMEOUT || '30000',
+      VITE_SECONDARY_API_URL: import.meta.env.VITE_SECONDARY_API_URL || '',
+      VITE_USE_RUNTIME_CONFIG: import.meta.env.VITE_USE_RUNTIME_CONFIG || 'true',
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

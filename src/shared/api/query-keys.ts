@@ -10,9 +10,8 @@
 export const queryKeys = {
   session: () => ['session'] as const,
 
-  // Add your domain query keys here. Example:
-  // users: {
-  //   all: () => ['users'] as const,
-  //   detail: (id: string) => ['users', id] as const,
-  // },
+  sampleItems: {
+    all: () => ['sample-items'] as const,
+    detail: (id: string) => ['sample-items', id] as const,
+  },
 } as const

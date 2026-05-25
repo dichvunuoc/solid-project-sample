@@ -13,11 +13,16 @@ Consumers fork or sync this repo as a baseline for **UI-only** services (see [RE
 
 ### Breaking (when released, move under a dated version header)
 
-_(Nothing pending — next edits go here.)_
+- Permission hooks moved from `@/shared/lib/hooks` to `@/entities/session` (import `usePermission` from `@/entities/session`).
 
 ### Added / changed (working tree — copy into next `template/v…` section when you tag)
 
-_(Nothing yet.)_
+- `backend-session` HTTP client: `credentials: 'include'`, no Bearer; docs in `docs/backend-session-bff.md`.
+- Reference vertical slice: `sample-item` entity, `refresh-sample-items` feature, `/sample-items` route.
+- Runtime config: `public/config.json` + `src/bootstrap.ts`.
+- Multi-service HTTP: `createHttpClient()`, `VITE_SECONDARY_API_URL`, `VITE_API_TIMEOUT`.
+- FSD enforcement: `eslint-plugin-boundaries`, Husky + lint-staged, CI `size` job.
+- Docs: Solid-aligned `ARCHITECTURE_RULES.md`, README microservices fleet section.
 
 ---
 
