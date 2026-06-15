@@ -1,18 +1,25 @@
 /**
  * HTTP Client Wrapper
  *
- * Centralized HTTP client with interceptors, error handling, and retry logic.
+ * Centralized HTTP client. Resolves auth headers, enforces a request timeout,
+ * and normalizes failures into {@link ApiError} (carrying the HTTP status) so
+ * callers and the global query error handler can branch on `statusCode`.
  * FSD Rule: This is in the Shared layer, accessible to all layers.
  *
  * - keycloak / mock: Bearer token via Authorization header
  * - backend-session: cookie session (credentials: 'include'), no Bearer
+ *
+ * This layer does NOT show toasts — presentation is owned by the global
+ * TanStack Query error handler (see `app/providers/query-provider.tsx`). It
+ * DOES own the auth side-effect: a 401 triggers a token refresh + retry, then
+ * a login redirect if that fails.
  */
 
 import { isBackendSessionMode, usesBearerAuth } from '@/shared/config/auth-mode'
 import { env } from '@/shared/config/env'
 import { getAuthToken } from '@/shared/lib/auth-token'
 import { authClient } from '@/shared/lib/client-auth'
-import { toast } from '@/shared/lib/toast'
+import { ApiError, createApiErrorFromResponse } from './error-handler'
 
 export interface HttpClientConfig {
   baseURL?: string
@@ -21,7 +28,7 @@ export interface HttpClientConfig {
 }
 
 export interface RequestConfig extends RequestInit {
-  skipErrorToast?: boolean
+  /** Skip attaching the Authorization header (e.g. public endpoints). */
   skipAuth?: boolean
 }
 
@@ -46,16 +53,7 @@ class HttpClient {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      let errorMessage = `Request failed with status ${response.status}`
-
-      try {
-        const errorData = await response.json()
-        errorMessage = errorData.message || errorData.error || errorMessage
-      } catch {
-        errorMessage = response.statusText || errorMessage
-      }
-
-      throw new Error(errorMessage)
+      throw await createApiErrorFromResponse(response)
     }
 
     const contentType = response.headers.get('content-type')
@@ -71,7 +69,7 @@ class HttpClient {
   }
 
   private async request<T>(url: string, config: RequestConfig = {}): Promise<T> {
-    const { skipErrorToast = false, skipAuth = false, headers = {}, ...fetchConfig } = config
+    const { skipAuth = false, headers = {}, ...fetchConfig } = config
 
     const fullUrl = url.startsWith('http') ? url : `${this.resolveBaseURL()}${url}`
 
@@ -111,41 +109,34 @@ class HttpClient {
 
       if (response.status === 401 && !skipAuth) {
         if (isBackendSessionMode()) {
-          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
-          }
-          throw new Error('Session expired. Please sign in again.')
+          this.redirectToLogin()
+          throw new ApiError('Session expired. Please sign in again.', 401)
         }
 
         const refreshed = await authClient.updateToken(30)
         if (refreshed) {
           response = await send()
         } else {
-          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
-          }
-          throw new Error('Session expired. Please sign in again.')
+          this.redirectToLogin()
+          throw new ApiError('Session expired. Please sign in again.', 401)
         }
       }
 
       return await this.handleResponse<T>(response)
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          const timeoutError = new Error('Request timeout')
-          if (!skipErrorToast) {
-            toast.error('Request timeout', 'The request took too long to complete')
-          }
-          throw timeoutError
-        }
-
-        if (!skipErrorToast) {
-          toast.error('Request failed', error.message || 'An unexpected error occurred')
-        }
+      // Normalize an aborted (timed-out) request into a 408 ApiError.
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ApiError('Request timeout', 408, 'TIMEOUT')
       }
-
       throw error
     }
+  }
+
+  /** Redirect to the login page, preserving the current path for return. */
+  private redirectToLogin(): void {
+    if (typeof window === 'undefined') return
+    if (window.location.pathname.startsWith('/login')) return
+    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
   }
 
   async get<T>(url: string, config?: RequestConfig): Promise<T> {

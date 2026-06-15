@@ -72,8 +72,14 @@ const mockAuthClient: AuthClient = {
   login: async () => {},
   logout: mockAuth.signOut,
   updateToken: async () => true,
-  hasRole: async role => role === 'user',
-  hasPermission: async () => false,
+  hasRole: async role => {
+    const session = await mockAuth.getSession()
+    return session?.user.roles?.includes(role) ?? false
+  },
+  hasPermission: async permission => {
+    const session = await mockAuth.getSession()
+    return session?.user.permissions?.includes(permission) ?? false
+  },
 }
 
 function resolveAuthClient(): AuthClient {

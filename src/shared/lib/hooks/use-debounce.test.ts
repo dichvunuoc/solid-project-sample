@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
 import { createRoot, createSignal } from 'solid-js'
+import { describe, it, expect } from 'vitest'
 import { createDebouncedAccessor } from './use-debounce'
 
 describe('useDebounce', () => {

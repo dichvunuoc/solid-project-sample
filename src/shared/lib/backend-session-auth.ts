@@ -8,8 +8,8 @@
  * The CSRF token is fetched from a dedicated endpoint on page load.
  */
 
-import type { AuthClient, AuthSessionData } from './client-auth'
 import { httpClient } from '@/shared/api/http-client'
+import type { AuthClient, AuthSessionData } from './client-auth'
 
 let csrfToken: string | null = null
 

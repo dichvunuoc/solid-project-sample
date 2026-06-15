@@ -96,55 +96,46 @@ interface ErrorResponse {
  * }
  * ```
  */
-export function handleApiError(
-  error: unknown,
-  options: {
-    showToast?: boolean
-    onUnauthorized?: () => void
-    onForbidden?: () => void
-    customHandlers?: Record<number, (error: ApiError) => void>
-  } = {}
-): never {
+export interface ErrorHandlerOptions {
+  showToast?: boolean
+  onUnauthorized?: (error: ApiError) => void
+  onForbidden?: (error: ApiError) => void
+  customHandlers?: Record<number, (error: ApiError) => void>
+}
+
+/**
+ * Surface an error to the user (toast) and run optional status callbacks.
+ *
+ * Display-only: it never throws and never redirects. Auth flows (401 → token
+ * refresh / login redirect) are owned by the HTTP client (`http-client.ts`),
+ * so this stays a pure presentation concern that can be wired into a global
+ * TanStack Query error handler without side effects.
+ */
+export function toastApiError(error: unknown, options: ErrorHandlerOptions = {}): void {
   const { showToast = true, onUnauthorized, onForbidden, customHandlers = {} } = options
 
   // Handle ApiError instances
   if (error instanceof ApiError) {
-    // Call custom handler if provided
     if (customHandlers[error.statusCode]) {
       customHandlers[error.statusCode]!(error)
-      throw error
+      return
     }
 
-    // Handle by status code
     switch (error.statusCode) {
       case 400:
-        if (showToast) {
-          toast.error('Invalid Request', error.message || 'Please check your input')
-        }
+        if (showToast) toast.error('Invalid Request', error.message || 'Please check your input')
         break
 
       case 401:
-        if (showToast) {
-          toast.error('Authentication Required', 'Please sign in to continue')
-        }
-        // Redirect to login or call custom handler
-        if (onUnauthorized) {
-          onUnauthorized()
-        } else {
-          // Default: redirect to login
-          setTimeout(() => {
-            window.location.href = '/login'
-          }, 1000)
-        }
+        if (showToast) toast.error('Authentication Required', 'Please sign in to continue')
+        onUnauthorized?.(error)
         break
 
       case 403:
         if (showToast) {
           toast.error('Access Denied', "You don't have permission to perform this action")
         }
-        if (onForbidden) {
-          onForbidden()
-        }
+        onForbidden?.(error)
         break
 
       case 404:
@@ -154,21 +145,15 @@ export function handleApiError(
         break
 
       case 409:
-        if (showToast) {
-          toast.error('Conflict', error.message || 'This resource already exists')
-        }
+        if (showToast) toast.error('Conflict', error.message || 'This resource already exists')
         break
 
       case 422:
-        if (showToast) {
-          toast.error('Validation Error', error.message || 'Please check your input')
-        }
+        if (showToast) toast.error('Validation Error', error.message || 'Please check your input')
         break
 
       case 429:
-        if (showToast) {
-          toast.error('Too Many Requests', 'Please slow down and try again later')
-        }
+        if (showToast) toast.error('Too Many Requests', 'Please slow down and try again later')
         break
 
       case 500:
@@ -184,21 +169,18 @@ export function handleApiError(
         break
 
       default:
-        if (showToast) {
-          toast.error('Error', error.message || 'An unexpected error occurred')
-        }
+        if (showToast) toast.error('Error', error.message || 'An unexpected error occurred')
     }
-    throw error
+    return
   }
 
   // Handle ValidationError
   if (error instanceof ValidationError) {
     if (showToast) {
-      // Show first validation error
       const firstError = Object.values(error.errors)[0]?.[0]
       toast.error('Validation Error', firstError || error.message)
     }
-    throw error
+    return
   }
 
   // Handle NetworkError
@@ -206,21 +188,31 @@ export function handleApiError(
     if (showToast) {
       toast.error('Network Error', 'Please check your internet connection and try again')
     }
-    throw error
+    return
   }
 
   // Handle standard Error
   if (error instanceof Error) {
-    if (showToast) {
-      toast.error('Error', error.message || 'An unexpected error occurred')
-    }
-    throw error
+    if (showToast) toast.error('Error', error.message || 'An unexpected error occurred')
+    return
   }
 
   // Handle unknown error types
-  if (showToast) {
-    toast.error('Unknown Error', 'An unexpected error occurred')
-  }
+  if (showToast) toast.error('Unknown Error', 'An unexpected error occurred')
+}
+
+/**
+ * Handle an error (toast + callbacks) and rethrow it for upstream control flow.
+ *
+ * Prefer {@link toastApiError} when you only need to surface the error (e.g. in
+ * a global query error handler). Use this in imperative try/catch blocks where
+ * you want the error to propagate after handling.
+ *
+ * @throws The original error after handling.
+ */
+export function handleApiError(error: unknown, options: ErrorHandlerOptions = {}): never {
+  toastApiError(error, options)
+  if (error instanceof Error) throw error
   throw new Error('Unknown error occurred')
 }
 

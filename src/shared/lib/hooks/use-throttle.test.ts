@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
 import { createRoot } from 'solid-js'
+import { describe, it, expect, vi } from 'vitest'
 import { createThrottledCallback } from './use-throttle'
 
 describe('useThrottle', () => {
