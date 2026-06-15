@@ -15,6 +15,10 @@ const envSchema = z.object({
   // Authentication / IAM
   VITE_AUTH_MODE: z.enum(['mock', 'keycloak', 'backend-session']).optional().default('mock'),
   VITE_USE_MOCK_AUTH: z.string().optional().default('true'),
+  // Mock RBAC (dev only): comma-separated roles/permissions for the mock session
+  // so role/permission guards can be exercised without a real IdP.
+  VITE_MOCK_ROLES: z.string().optional().default('user'),
+  VITE_MOCK_PERMISSIONS: z.string().optional().default(''),
   VITE_KEYCLOAK_URL: z.string().optional().default(''),
   VITE_KEYCLOAK_REALM: z.string().optional().default(''),
   VITE_KEYCLOAK_CLIENT_ID: z.string().optional().default(''),
@@ -52,12 +56,47 @@ const envSchema = z.object({
   VITE_USE_RUNTIME_CONFIG: z.string().optional().default('true'),
 })
 
+/**
+ * Cross-field validation: fail fast on misconfiguration instead of silently
+ * defaulting to empty strings (which surface much later as confusing runtime
+ * errors). Runs after individual field parsing.
+ */
+export const validatedEnvSchema = envSchema.superRefine((val, ctx) => {
+  // Keycloak mode needs a fully specified IdP.
+  if (val.VITE_AUTH_MODE === 'keycloak') {
+    const required = [
+      'VITE_KEYCLOAK_URL',
+      'VITE_KEYCLOAK_REALM',
+      'VITE_KEYCLOAK_CLIENT_ID',
+    ] as const
+    for (const key of required) {
+      if (!val[key]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when VITE_AUTH_MODE=keycloak`,
+        })
+      }
+    }
+  }
+
+  // Production must know where the API is — unless runtime config supplies it.
+  const usingRuntimeConfig = val.VITE_USE_RUNTIME_CONFIG !== 'false'
+  if (val.NODE_ENV === 'production' && !val.VITE_API_URL && !usingRuntimeConfig) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['VITE_API_URL'],
+      message: 'VITE_API_URL is required in production unless VITE_USE_RUNTIME_CONFIG is enabled',
+    })
+  }
+})
+
 type Env = z.infer<typeof envSchema>
 
 // Parse and validate environment variables
 function getEnv(): Env {
   try {
-    return envSchema.parse({
+    return validatedEnvSchema.parse({
       VITE_API_URL: import.meta.env.VITE_API_URL || '',
       VITE_APP_NAME: import.meta.env.VITE_APP_NAME || 'Frontend Sample',
       NODE_ENV: (import.meta.env.MODE || 'development') as 'development' | 'production' | 'test',
@@ -69,6 +108,8 @@ function getEnv(): Env {
           ? 'mock'
           : 'backend-session'),
       VITE_USE_MOCK_AUTH: import.meta.env.VITE_USE_MOCK_AUTH || 'true',
+      VITE_MOCK_ROLES: import.meta.env.VITE_MOCK_ROLES ?? 'user',
+      VITE_MOCK_PERMISSIONS: import.meta.env.VITE_MOCK_PERMISSIONS ?? '',
       VITE_KEYCLOAK_URL: import.meta.env.VITE_KEYCLOAK_URL || '',
       VITE_KEYCLOAK_REALM: import.meta.env.VITE_KEYCLOAK_REALM || '',
       VITE_KEYCLOAK_CLIENT_ID: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || '',
@@ -103,9 +144,11 @@ function getEnv(): Env {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const missingVars = error.issues.map(issue => issue.path.join('.')).join(', ')
+      const details = error.issues
+        .map(issue => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
+        .join('\n')
       throw new Error(
-        `Invalid environment variables: ${missingVars}\n` +
+        `Invalid environment variables:\n${details}\n` +
           'Please check your .env file and ensure all required variables are set.'
       )
     }

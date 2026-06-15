@@ -14,9 +14,16 @@ Consumers fork or sync this repo as a baseline for **UI-only** services (see [RE
 ### Breaking (when released, move under a dated version header)
 
 - Permission hooks moved from `@/shared/lib/hooks` to `@/entities/session` (import `usePermission` from `@/entities/session`).
+- **Error handling unified.** `httpClient` now throws `ApiError` (with `statusCode`) instead of a plain `Error`, and no longer shows toasts itself. Toasts are emitted centrally by the global TanStack Query error handler in `app/providers/query-provider.tsx`. Opt out per query/mutation with `meta: { skipErrorToast: true }`. The `RequestConfig.skipErrorToast` option was removed (use `meta` instead); `skipAuth` is unchanged. `handleApiError` no longer auto-redirects on 401 — the 401 → token refresh → login redirect flow is owned solely by `httpClient`.
+- **RBAC slimmed to a mechanism.** `permissions.ts` no longer ships the blog/payment permission catalog or fictional `/admin`,`/moderate`,`/profile` routes; `Permission` is now `string`. The full example moved to `src/shared/lib/permissions.example.ts` (not imported). Static `rolePermissions` is empty by default — permission checks fall back to the IdP token claims on the session. If you relied on the old static grants, copy them from the example file.
 
 ### Added / changed (working tree — copy into next `template/v…` section when you tag)
 
+- Centralized error presentation via `QueryCache`/`MutationCache` `onError`; new `toastApiError()` (display-only, never throws/redirects) alongside `handleApiError()`.
+- Mock RBAC is now configurable for local guard testing: `VITE_MOCK_ROLES` / `VITE_MOCK_PERMISSIONS` (comma-separated) feed the mock session; `authClient.hasRole/hasPermission` read from it instead of being hardcoded.
+- Fail-fast env validation: `VITE_AUTH_MODE=keycloak` now requires URL/realm/clientId; production requires `VITE_API_URL` unless `VITE_USE_RUNTIME_CONFIG` is enabled. Error messages list the offending vars.
+- New `widgets` layer example: `src/widgets/page-header/` (+ `widgets/README.md`), wired into `/sample-items`.
+- Tests added for `http-client`, `error-handler`, `permissions`, `route-guards`, and `env` validation (13 → 56 tests).
 - `backend-session` HTTP client: `credentials: 'include'`, no Bearer; docs in `docs/backend-session-bff.md`.
 - Reference vertical slice: `sample-item` entity, `refresh-sample-items` feature, `/sample-items` route.
 - Runtime config: `public/config.json` + `src/bootstrap.ts`.

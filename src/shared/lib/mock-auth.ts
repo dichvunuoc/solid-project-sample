@@ -6,7 +6,27 @@
  * This is a mock implementation — never use in production.
  */
 
+import { env } from '@/shared/config/env'
 import type { AuthSessionData } from './client-auth'
+
+/** Parse a comma-separated env list into a trimmed, non-empty string array. */
+function parseCsv(value: string): string[] {
+  return value
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean)
+}
+
+/** Roles granted to the mock session (configurable via VITE_MOCK_ROLES). */
+export function mockRoles(): string[] {
+  const roles = parseCsv(env.VITE_MOCK_ROLES)
+  return roles.length > 0 ? roles : ['user']
+}
+
+/** Permissions granted to the mock session (configurable via VITE_MOCK_PERMISSIONS). */
+export function mockPermissions(): string[] {
+  return parseCsv(env.VITE_MOCK_PERMISSIONS)
+}
 
 interface StoredUser {
   id: string
@@ -142,14 +162,13 @@ export const mockAuth = {
   },
 
   signIn: {
-    email: async (params: {
-      email: string
-      password: string
-    }): Promise<{ user: SafeUser }> => {
+    email: async (params: { email: string; password: string }): Promise<{ user: SafeUser }> => {
       await new Promise(resolve => setTimeout(resolve, 500))
 
       const users = getUsers()
-      const user = users.find(u => u.email === params.email && verifyPassword(params.password, u.ph))
+      const user = users.find(
+        u => u.email === params.email && verifyPassword(params.password, u.ph)
+      )
 
       if (!user) {
         throw new Error('Invalid email or password')
@@ -190,7 +209,8 @@ export const mockAuth = {
         id: user.id,
         email: user.email,
         name: user.name,
-        roles: ['user'],
+        roles: mockRoles(),
+        permissions: mockPermissions(),
       },
       session: {
         token: session.token,
