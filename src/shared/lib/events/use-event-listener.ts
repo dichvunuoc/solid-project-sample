@@ -5,12 +5,12 @@
  */
 
 import { onCleanup, onMount } from 'solid-js'
-import type { BaseEvent } from './core/event.base'
 import { eventBus } from './bus'
+import type { BaseEvent } from './core/event.base'
 
 export function useEventListener<T extends BaseEvent>(
   eventName: string,
-  handler: (event: T) => void,
+  handler: (event: T) => void
 ): void {
   onMount(() => {
     const typedHandler = handler as (event: BaseEvent) => void

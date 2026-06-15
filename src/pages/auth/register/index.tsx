@@ -4,8 +4,8 @@
 
 import { Link, useNavigate } from '@tanstack/solid-router'
 import { Show, createSignal } from 'solid-js'
-import { useSessionContext } from '@/entities/session/ui/session-provider'
 import { SignUpForm } from '@/features/auth/sign-up'
+import { useSessionContext } from '@/entities/session/ui/session-provider'
 import { env } from '@/shared/config/env'
 import { authClient } from '@/shared/lib/client-auth'
 

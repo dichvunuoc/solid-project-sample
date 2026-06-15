@@ -6,8 +6,8 @@ import { createForm, zodForm } from '@modular-forms/solid'
 import { z } from 'zod'
 import { authClient } from '@/shared/lib/client-auth'
 import { toast } from '@/shared/lib/toast'
-import { Button } from '@/shared/ui/shadcn/button'
 import { TextField } from '@/shared/ui/forms'
+import { Button } from '@/shared/ui/shadcn/button'
 
 const signUpSchema = z
   .object({

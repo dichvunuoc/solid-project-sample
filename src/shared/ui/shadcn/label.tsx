@@ -18,7 +18,7 @@ interface LabelProps extends Omit<ComponentProps<'label'>, 'class' | 'children'>
 
 export function Label(props: LabelProps) {
   const [local, rest] = splitProps(props, ['class', 'children'])
-  // eslint-disable-next-line jsx-a11y/label-has-associated-control -- consumer provides the `for` association
+
   return (
     <label class={cn(labelClass, local.class)} {...rest}>
       {local.children}

@@ -25,12 +25,12 @@ import {
 import { createStore } from 'solid-js/store'
 import { queryKeys } from '@/shared/api/query-keys'
 import { env } from '@/shared/config/env'
+import { broadcastAuthEvent, onAuthBroadcast } from '@/shared/lib/auth-broadcast'
 import type { AuthSessionData } from '@/shared/lib/client-auth'
 import { authClient } from '@/shared/lib/client-auth'
 import { attachKeycloakSessionSync } from '@/shared/lib/keycloak-auth'
 import { clearUser, setUser } from '@/shared/lib/monitoring'
 import { createIdleTimeout } from '@/shared/lib/session-timeout'
-import { broadcastAuthEvent, onAuthBroadcast } from '@/shared/lib/auth-broadcast'
 
 interface SessionStoreShape {
   session: AuthSessionData | null

@@ -2,8 +2,8 @@
  * Toast Provider (Solid).
  */
 
-import { Toaster } from 'solid-sonner'
 import type { JSX } from 'solid-js'
+import { Toaster } from 'solid-sonner'
 
 export function ToastProvider(props: { children: JSX.Element }) {
   return (
